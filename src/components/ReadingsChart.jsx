@@ -1,5 +1,5 @@
 // src/components/ReadingsChart.jsx
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Box, Text } from "@chakra-ui/react";
 
 export default function ReadingsChart({ readings }) {
@@ -7,29 +7,38 @@ export default function ReadingsChart({ readings }) {
     return <Text color="gray.500">No readings to display.</Text>;
   }
 
-  // Map readings to chart-friendly format
   const chartData = readings.map((r) => ({
-    time: new Date(r.recorded_at).toLocaleTimeString(), // X axis
+    time: new Date(r.recorded_at).toLocaleTimeString(),
     temperature: r.temperature,
     humidity: r.humidity,
   }));
 
   return (
-    <Box w="100%" h="300px" borderWidth={1} borderRadius="md" p={4} bg="gray.50">
+    // Parent must have fixed height!
+    <Box
+      w="100%"
+      h="400px"          // <- FIXED HEIGHT in pixels
+      borderWidth={1}
+      borderRadius="md"
+      p={4}
+      bg="gray.50"
+    >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
+        <LineChart data={chartData} margin={{ top: 20, right: 50, left: 20, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" />
-          <YAxis yAxisId="left" orientation="left" stroke="#F6AD55" /> {/* Temp */}
-          <YAxis yAxisId="right" orientation="right" stroke="#4299E1" /> {/* Humidity */}
-          <Tooltip />
-          <Legend />
+          <YAxis yAxisId="left" orientation="left" stroke="#F6AD55" />
+          <YAxis yAxisId="right" orientation="right" stroke="#4299E1" />
+          <Tooltip formatter={(value) => (value != null ? value : "N/A")} />
+          <Legend verticalAlign="top" height={36} />
           <Line
             yAxisId="left"
             type="monotone"
             dataKey="temperature"
             stroke="#F6AD55"
             activeDot={{ r: 6 }}
+            name="Temperature (°C)"
+            connectNulls
           />
           <Line
             yAxisId="right"
@@ -37,6 +46,8 @@ export default function ReadingsChart({ readings }) {
             dataKey="humidity"
             stroke="#4299E1"
             activeDot={{ r: 6 }}
+            name="Humidity (%)"
+            connectNulls
           />
         </LineChart>
       </ResponsiveContainer>

@@ -97,7 +97,6 @@ export default function DevicePage() {
   } = device;
 
   const lastReading = readings[0];
-  console.log("lastReading", lastReading);
   const lastTemp = lastReading && lastReading.temperature !== null ? `${lastReading.temperature}°C` : "N/A";
   const lastHum = lastReading && lastReading.humidity !== null ? `${lastReading.humidity}%` : "N/A";
 
@@ -202,7 +201,8 @@ export default function DevicePage() {
         </Flex>
 
         {/* RIGHT: Latest Readings Widget */}
-        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} />
+        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} timestamp={lastReading?.recorded_at}
+/>
       </Grid>
 
       <Divider my={10} />

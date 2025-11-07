@@ -1,7 +1,10 @@
-import { Box, Flex, Stat, StatLabel, StatNumber, StatHelpText, Heading, Icon } from "@chakra-ui/react";
+// src/components/LatestReadingsWidget.jsx
+import { Box, Flex, Stat, StatLabel, StatNumber, StatHelpText, Heading, Icon, Text } from "@chakra-ui/react";
 import { FiThermometer, FiDroplet } from "react-icons/fi";
 
-export default function LatestReadingsWidget({ temperature, humidity }) {
+export default function LatestReadingsWidget({ temperature, humidity, timestamp }) {
+  const formattedTime = timestamp ? new Date(timestamp).toLocaleString() : "N/A";
+
   return (
     <Flex
       borderWidth={1}
@@ -27,7 +30,6 @@ export default function LatestReadingsWidget({ temperature, humidity }) {
             <StatNumber fontSize="5xl" color="orange.300">
               {temperature}
             </StatNumber>
-            <StatHelpText color="gray.400">Last reading</StatHelpText>
           </Stat>
         </Box>
         <Box textAlign="center">
@@ -39,10 +41,12 @@ export default function LatestReadingsWidget({ temperature, humidity }) {
             <StatNumber fontSize="5xl" color="blue.300">
               {humidity}
             </StatNumber>
-            <StatHelpText color="gray.400">Last reading</StatHelpText>
           </Stat>
         </Box>
       </Flex>
+      <Text mt={4} fontSize="sm" color="gray.400">
+        Last reading: {formattedTime}
+      </Text>
     </Flex>
   );
 }
