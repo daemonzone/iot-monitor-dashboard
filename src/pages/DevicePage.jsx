@@ -96,6 +96,7 @@ export default function DevicePage() {
     last_status_update,
   } = device;
 
+console.log(device);
   const lastReading = readings[0];
   const lastTemp = lastReading && lastReading.temperature !== null ? `${lastReading.temperature}°C` : "N/A";
   const lastHum = lastReading && lastReading.humidity !== null ? `${lastReading.humidity}%` : "N/A";

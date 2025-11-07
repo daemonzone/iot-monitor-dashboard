@@ -1,7 +1,8 @@
-import { Box, Image, Text, HStack, VStack, Badge, Icon } from "@chakra-ui/react";
+import { Box, Image, Text, HStack, VStack, Badge, Icon, Flex } from "@chakra-ui/react";
 import { FiCpu } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";  // ⬅️ this is required
 import { isDeviceOnline } from "../utils/deviceStatus";
+import DeviceLastReadingsBox from "../components/DeviceLastReadingsBox";
 
 export default function DeviceCard({ device }) {
   const navigate = useNavigate();
@@ -14,10 +15,11 @@ export default function DeviceCard({ device }) {
     location,
     ip_addr,
     uptime,
-    status,
+    last_status_update,
+    readings
   } = device;
 
-  const online = isDeviceOnline(device.last_status_update);
+  const online = isDeviceOnline(last_status_update);
 
   return (
     <Box
@@ -31,58 +33,55 @@ export default function DeviceCard({ device }) {
       _hover={{ shadow: "md", transform: "translateY(-2px)" }}
       onClick={() => navigate(`/devices/${device_id}`)}
     >
-      <HStack align="start" spacing={4}>
-        {/* Device image or icon */}
-        {image ? (
-          <Image
-            src={image}
-            alt={model}
-            borderRadius="md"
-            boxSize="140px"          // bigger image
-            objectFit="contain"
-            bg="white"
-          />
-        ) : (
-          <Box
-            boxSize="140px"
-            borderRadius="md"
-            bg="gray.100"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Icon as={FiCpu} boxSize={16} color="gray.400" />
-          </Box>
-        )}
+      <Flex>
+        {/* Left: Image + info */}
+        <HStack spacing={4} flex={1} align="start">
+          {image ? (
+            <Image
+              src={image}
+              alt={model}
+              borderRadius="md"
+              boxSize="140px"
+              objectFit="contain"
+              bg="white"
+            />
+          ) : (
+            <Box
+              boxSize="140px"
+              borderRadius="md"
+              bg="gray.100"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+            >
+              <Icon as={FiCpu} boxSize={16} color="gray.400" />
+            </Box>
+          )}
 
-        {/* Device info */}
-        <VStack align="start" spacing={1} flex={1}>
-          <HStack>
-            <Text fontWeight="bold" fontSize="2xl">
-              {model || "Unknown Device"}
+          <VStack align="start" spacing={1} flex={1}>
+            <HStack>
+              <Text fontWeight="bold" fontSize="2xl">{model || "Unknown Device"}</Text>
+              <Badge colorScheme={online ? "green" : "red"}>{online ? "Online" : "Offline"}</Badge>
+            </HStack>
+
+            <Text fontSize="sm" color="gray.600">
+              <Text as="span" fontWeight="bold">Device ID:</Text> {device_id || "Unknown"}
             </Text>
-            <Badge colorScheme={online ? "green" : "red"}>
-              {online ? "Online" : "Offline"}
-            </Badge>
-          </HStack>
+            <Text fontSize="sm" color="gray.600">
+              <Text as="span" fontWeight="bold">Location:</Text> {location || "Unknown"}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              <Text as="span" fontWeight="bold">IP:</Text> {ip_addr || "N/A"}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && online ? `${uptime}s` : "N/A"}
+            </Text>
+          </VStack>
+        </HStack>
 
-          <Text fontSize="sm" color="gray.600">
-            <Text as="span" fontWeight="bold">Device ID:</Text> {device_id || "Unknown"}
-          </Text>
-
-          <Text fontSize="sm" color="gray.600">
-            <Text as="span" fontWeight="bold">Location:</Text> {location || "Unknown"}
-          </Text>
-
-          <Text fontSize="sm" color="gray.600">
-            <Text as="span" fontWeight="bold">IP:</Text> {ip_addr || "N/A"}
-          </Text>
-
-          <Text fontSize="sm" color="gray.600">
-            <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && online ? `${uptime}s` : "N/A"}
-          </Text>
-        </VStack>
-      </HStack>
+        {/* Right: Last readings */}
+        <DeviceLastReadingsBox lastReading={device.readings[0] || { temperature: '-', humidity: '-' }} />
+      </Flex>
     </Box>
   );
 }
