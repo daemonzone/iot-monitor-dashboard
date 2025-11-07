@@ -208,30 +208,30 @@ export default function DevicePage() {
       <Divider my={10} />
 
       {/* 📈 Bottom Section: Reading List + Chart */}
-      <Grid templateColumns={{ base: "1fr", md: "20% 80%" }} gap={6} alignItems="start">
+      <Flex gap={6} direction={{ base: "column", md: "row" }} align="start">
         {/* Left: Reading List */}
-        <Box>
+        <Box w={{ base: "100%", md: "30%" }}>
           <Heading size="md" mb={4}>
             Recent Readings
           </Heading>
           {readings.length === 0 ? (
             <Text color="gray.500">No readings available.</Text>
           ) : (
-            <Box overflowX="auto">
-              <Grid templateColumns="1fr" gap={4}>
+            <Box overflowY="auto" maxH="600px">
+              <VStack spacing={4} align="stretch">
                 {readings.map((r) => (
-                  <ReadingBox key={r.id} reading={r} />
+                  <ReadingBox key={r.recorded_at} reading={r} />
                 ))}
-              </Grid>
+              </VStack>
             </Box>
           )}
         </Box>
 
-        <Box>
-          {/* Right: Chart placeholder */}
+        {/* Right: Chart */}
+        <Box w={{ base: "100%", md: "70%" }}>
           <Heading size="md" mb={4}>
             Temperature/Humidity Chart
-          </Heading>        
+          </Heading>
           <Box
             borderWidth={1}
             borderRadius="md"
@@ -244,7 +244,7 @@ export default function DevicePage() {
             <ReadingsChart readings={readings} />
           </Box>
         </Box>
-    </Grid>
+      </Flex>
     </Box>
   );
 }

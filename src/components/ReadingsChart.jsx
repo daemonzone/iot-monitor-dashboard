@@ -8,7 +8,7 @@ export default function ReadingsChart({ readings }) {
   }
 
   const chartData = readings.map((r) => ({
-    time: new Date(r.recorded_at).toLocaleTimeString(),
+    time: new Date(r.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     temperature: r.temperature,
     humidity: r.humidity,
   }));
@@ -24,9 +24,9 @@ export default function ReadingsChart({ readings }) {
       bg="gray.50"
     >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 20, right: 50, left: 20, bottom: 20 }}>
+        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="time" />
+          <XAxis dataKey="time" angle={-45} textAnchor="end" />
           <YAxis yAxisId="left" orientation="left" stroke="#F6AD55" />
           <YAxis yAxisId="right" orientation="right" stroke="#4299E1" />
           <Tooltip formatter={(value) => (value != null ? value : "N/A")} />
