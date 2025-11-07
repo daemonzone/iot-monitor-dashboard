@@ -7,10 +7,12 @@ export default function ReadingsChart({ readings }) {
     return <Text color="gray.500">No readings to display.</Text>;
   }
 
-  const chartData = readings.map((r) => ({
-    time: new Date(r.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    temperature: r.temperature,
-    humidity: r.humidity,
+  const chartData = [...readings]
+    .reverse()
+    .map((r) => ({
+      time: new Date(r.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      temperature: r.temperature,
+      humidity: r.humidity,
   }));
 
   return (
