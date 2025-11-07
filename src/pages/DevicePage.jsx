@@ -28,6 +28,8 @@ import {
 } from "react-icons/fi";
 import ReadingBox from "../components/ReadingBox";
 import { isDeviceOnline } from "../utils/deviceStatus";
+import ReadingsChart from "../components/ReadingsChart.jsx";
+import LatestReadingsWidget from "../components/LatestReadingsWidget";
 
 export default function DevicePage() {
   const { id } = useParams();
@@ -95,14 +97,9 @@ export default function DevicePage() {
   } = device;
 
   const lastReading = readings[0];
-  const lastTemp =
-    lastReading && lastReading.temperature !== null
-      ? `${lastReading.temperature}°C`
-      : "N/A";
-  const lastHum =
-    lastReading && lastReading.humidity !== null
-      ? `${lastReading.humidity}%`
-      : "N/A";
+  console.log("lastReading", lastReading);
+  const lastTemp = lastReading && lastReading.temperature !== null ? `${lastReading.temperature}°C` : "N/A";
+  const lastHum = lastReading && lastReading.humidity !== null ? `${lastReading.humidity}%` : "N/A";
 
   const online = isDeviceOnline(device.last_status_update);
 
@@ -205,53 +202,13 @@ export default function DevicePage() {
         </Flex>
 
         {/* RIGHT: Latest Readings Widget */}
-        <Flex
-          borderWidth={1}
-          borderRadius="md"
-          p={8}
-          bg="gray.800"
-          shadow="lg"
-          color="white"
-          direction="column"
-          align="center"
-          justify="center"
-        >
-          <Heading size="md" mb={6}>
-            Latest Readings
-          </Heading>
-          <Flex gap={12} align="center" justify="center">
-            <Box textAlign="center">
-              <Stat>
-                <StatLabel fontSize="lg" color="gray.300">
-                  <Icon as={FiThermometer} mr={2} />
-                  Temperature
-                </StatLabel>
-                <StatNumber fontSize="5xl" color="orange.300">
-                  {lastTemp}
-                </StatNumber>
-                <StatHelpText color="gray.400">Last reading</StatHelpText>
-              </Stat>
-            </Box>
-            <Box textAlign="center">
-              <Stat>
-                <StatLabel fontSize="lg" color="gray.300">
-                  <Icon as={FiDroplet} mr={2} />
-                  Humidity
-                </StatLabel>
-                <StatNumber fontSize="5xl" color="blue.300">
-                  {lastHum}
-                </StatNumber>
-                <StatHelpText color="gray.400">Last reading</StatHelpText>
-              </Stat>
-            </Box>
-          </Flex>
-        </Flex>
+        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} />
       </Grid>
 
       <Divider my={10} />
 
       {/* 📈 Bottom Section: Reading List + Chart */}
-      <Grid templateColumns={{ base: "1fr", md: "30% 70%" }} gap={6} alignItems="start">
+      <Grid templateColumns={{ base: "1fr", md: "20% 80%" }} gap={6} alignItems="start">
         {/* Left: Reading List */}
         <Box>
           <Heading size="md" mb={4}>
@@ -273,7 +230,7 @@ export default function DevicePage() {
         <Box>
           {/* Right: Chart placeholder */}
           <Heading size="md" mb={4}>
-            Temperature/Humidity Cahrt
+            Temperature/Humidity Chart
           </Heading>        
           <Box
             borderWidth={1}
@@ -284,7 +241,7 @@ export default function DevicePage() {
             alignItems="center"
             justifyContent="center"
           >
-            <Text color="gray.400">Chart will go here</Text>
+            <ReadingsChart readings={readings} />
           </Box>
         </Box>
     </Grid>
