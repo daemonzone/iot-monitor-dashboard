@@ -2,7 +2,7 @@
 import { Box, VStack, HStack, Text } from "@chakra-ui/react";
 
 export default function DeviceLastReadingsBox({ lastReading }) {
-  if (!lastReading) return "stocazzo";
+  if (!lastReading) return null;
 
   const { temperature, humidity, recorded_at } = lastReading;
 

@@ -16,7 +16,7 @@ export default function DeviceCard({ device }) {
     ip_addr,
     uptime,
     last_status_update,
-    readings
+    last_reading
   } = device;
 
   const online = isDeviceOnline(last_status_update);
@@ -80,7 +80,7 @@ export default function DeviceCard({ device }) {
         </HStack>
 
         {/* Right: Last readings */}
-        <DeviceLastReadingsBox lastReading={device.readings[0] || { temperature: '-', humidity: '-' }} />
+        <DeviceLastReadingsBox lastReading={device.last_reading || { temperature: '-', humidity: '-' }} />
       </Flex>
     </Box>
   );
