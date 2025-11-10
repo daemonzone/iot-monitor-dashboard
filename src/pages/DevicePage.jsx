@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Heading,
@@ -13,14 +14,8 @@ import {
   Grid,
   Flex,
   Button,
-  Stat,
-  StatLabel,
-  StatNumber,
-  StatHelpText,
 } from "@chakra-ui/react";
-import { useParams, useNavigate } from "react-router-dom";
-import { FiCpu, FiWifi, FiArrowLeft, FiThermometer, FiDroplet } from "react-icons/fi";
-import ReadingBox from "../components/ReadingBox";
+import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
@@ -35,6 +30,23 @@ export default function DevicePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Defaults
+  const defaultStart = new Date().toISOString().split("T")[0]; // today YYYY-MM-DD
+  const defaultEnd = new Date().toISOString().split("T")[0];   // today YYYY-MM-DD
+  const defaultBucket = "15 minutes";
+
+  const [startDate, setStartDate] = useState(defaultStart);
+  const [endDate, setEndDate] = useState(defaultEnd);
+  const [timebucket, setTimebucket] = useState(defaultBucket);
+
+  const intervals = [
+    "5 minutes","10 minutes","15 minutes","30 minutes",
+    "1 hour","2 hours","4 hours","8 hours",
+    "12 hours","1 day","2 days","5 days",
+    "1 week","2 weeks","4 weeks","1 month"
+  ];
+
+  // Fetch device details
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -42,33 +54,48 @@ export default function DevicePage() {
       return;
     }
 
+    fetch(`${API_URL}/devices/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (res.status === 403) throw new Error("Forbidden — check your token");
+        if (res.status === 404) throw new Error("Device not found");
+        if (!res.ok) throw new Error("Failed to fetch device details");
+        return res.json();
+      })
+      .then((data) => setDevice(data.device || data))
+      .catch((err) => setError(err.message));
+  }, [id, navigate, API_URL]);
+
+  // Fetch readings
+  const fetchReadings = () => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
     setLoading(true);
     setError("");
 
-  Promise.all([
-      fetch(`${API_URL}/devices/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-      fetch(`${API_URL}/devices/${id}/readings`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    ])
-      .then(async ([deviceRes, readingsRes]) => {
-        if (deviceRes.status === 403) throw new Error("Forbidden — check your token");
-        if (deviceRes.status === 404) throw new Error("Device not found");
-        if (!deviceRes.ok) throw new Error("Failed to fetch device details");
-        if (!readingsRes.ok) throw new Error("Failed to fetch device readings");
+    const url = `${API_URL}/devices/${id}/readings?start_date=${encodeURIComponent(
+      startDate
+    )}&end_date=${encodeURIComponent(endDate)}&timebucket=${encodeURIComponent(
+      timebucket
+    )}`;
 
-        const deviceData = await deviceRes.json();
-        const readingsData = await readingsRes.json();
-
-        // unwrap "device" and "readings" if wrapped
-        setDevice(deviceData.device || deviceData);
-        setReadings(readingsData.readings || readingsData);
+console.log(url);
+    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch readings");
+        return res.json();
       })
+      .then((data) => setReadings(data.readings || []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [id, navigate]);
+  };
+
+  // Re-fetch readings when params change
+  useEffect(() => {
+    fetchReadings();
+  }, [id, startDate, endDate, timebucket]);
 
   if (loading)
     return (
@@ -86,27 +113,19 @@ export default function DevicePage() {
 
   if (!device) return null;
 
-  const {
-    model,
-    device_id,
-    image,
-    location,
-    ip_addr,
-    uptime,
-    status,
-    first_registration_timestamp,
-    last_status_update
-  } = device;
-
-  const lastReading = readings[0];
-  const lastTemp = lastReading && lastReading.temperature !== null ? `${lastReading.temperature}°C` : "N/A";
-  const lastHum = lastReading && lastReading.humidity !== null ? `${lastReading.humidity}%` : "N/A";
-
+  const lastReading = device.last_reading;
+  const lastTemp = lastReading?.temperature != null ? `${lastReading.temperature}°C` : "N/A";
+  const lastHum = lastReading?.humidity != null ? `${lastReading.humidity}%` : "N/A";
   const online = isDeviceOnline(device.last_status_update);
+
+  const handleClick = (intv, e) => {
+    setStartDate('2025-11-06');
+    setTimebucket(intv); // update timebucket state
+  };
 
   return (
     <Box p={6}>
-      {/* 🔙 Back Button */}
+      {/* Back Button */}
       <Button
         leftIcon={<FiArrowLeft />}
         colorScheme="gray"
@@ -126,13 +145,8 @@ export default function DevicePage() {
         </Badge>
       </HStack>
 
-      {/* 🧩 Main Layout */}
-      <Grid
-        templateColumns={{ base: "1fr", md: "1fr 1fr" }}
-        gap={8}
-        alignItems="stretch"
-      >
-        {/* LEFT: Image + Info */}
+      {/* Device Info */}
+      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8}>
         <Flex
           borderWidth={1}
           borderRadius="md"
@@ -165,36 +179,13 @@ export default function DevicePage() {
               <Icon as={FiCpu} boxSize={16} color="gray.400" />
             </Box>
           )}
-
           <VStack align="start" spacing={2}>
-            <Text>
-              <Text as="span" fontWeight="bold">
-                Device ID:
-              </Text>{" "}
-              {device.device_id}
-            </Text>
-            <Text>
-              <Text as="span" fontWeight="bold">
-                Location:
-              </Text>{" "}
-              {device.location || "Unknown"}
-            </Text>
-            <Text>
-              <Icon as={FiWifi} mr={2} />
-              <Text as="span" fontWeight="bold">
-                IP:
-              </Text>{" "}
-              {device.ip_addr || "N/A"}
-            </Text>
-            <Text>
-              <Text as="span" fontWeight="bold">
-                Uptime:
-              </Text>{" "}
-              {device.uptime ? `${device.uptime}s` : "N/A"}
-            </Text>
+            <Text><b>Device ID:</b> {device.device_id}</Text>
+            <Text><b>Location:</b> {device.location || "Unknown"}</Text>
+            <Text><Icon as={FiWifi} mr={2} /><b>IP:</b> {device.ip_addr || "N/A"}</Text>
+            <Text><b>Uptime:</b> {device.uptime ? `${device.uptime}s` : "N/A"}</Text>
             <Text fontSize="sm" color="gray.500">
-              Registered:{" "}
-              {new Date(device.first_registration_timestamp).toLocaleString()}
+              Registered: {new Date(device.first_registration_timestamp).toLocaleString()}
             </Text>
             <Text fontSize="sm" color="gray.500">
               Last update: {new Date(device.last_status_update).toLocaleString()}
@@ -202,33 +193,46 @@ export default function DevicePage() {
           </VStack>
         </Flex>
 
-        {/* RIGHT: Latest Readings Widget */}
-        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} timestamp={lastReading?.time}
-/>
+        {/* Latest Readings */}
+        <LatestReadingsWidget
+          temperature={lastTemp}
+          humidity={lastHum}
+          timestamp={lastReading?.time}
+        />
       </Grid>
 
       <Divider my={10} />
 
-      {/* 📈 Bottom Section: Reading List + Chart */}
-      <Flex gap={6} direction={{ base: "column", md: "row" }} align="start">
-        {/* Right: Chart */}
-        <Box w={{ base: "100%" }}>
-          <Heading size="md" mb={4}>
-            Temperature/Humidity Chart
-          </Heading>
-          <Box
-            borderWidth={1}
-            borderRadius="md"
-            bg="gray.50"
-            minH="300px"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <ReadingsChart readings={readings} />
-          </Box>
+      {/* Chart Section */}
+      <Box w="100%">
+        <Heading size="md" mb={4}>Temperature/Humidity Chart</Heading>
+
+        <HStack wrap="wrap" mb={4} spacing={2}>
+          {intervals.map((intv) => (
+            <Button
+              key={intv}
+              type="button"
+              size="sm"
+              colorScheme={intv === timebucket ? "blue" : "gray"}
+              onClick={() => handleClick(intv)}
+            >
+              {intv}
+            </Button>
+          ))}
+        </HStack>
+
+        <Box
+          borderWidth={1}
+          borderRadius="md"
+          bg="gray.50"
+          minH="300px"
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          <ReadingsChart readings={readings} />
         </Box>
-      </Flex>
+      </Box>
     </Box>
   );
 }
