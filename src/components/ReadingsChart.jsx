@@ -10,10 +10,20 @@ export default function ReadingsChart({ readings }) {
   const chartData = [...readings]
     .reverse()
     .map((r) => ({
-      time: new Date(r.recorded_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: new Date(r.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       temperature: r.temperature,
       humidity: r.humidity,
   }));
+
+  // Compute min/max for temperature
+  const tempValues = chartData.map(d => d.temperature);
+  const tempMin = Math.min(...tempValues);
+  const tempMax = Math.max(...tempValues);
+
+  // Compute min/max for humidity (optional)
+  const humValues = chartData.map(d => d.humidity);
+  const humMin = Math.min(...humValues);
+  const humMax = Math.max(...humValues);
 
   return (
     // Parent must have fixed height!
@@ -29,8 +39,23 @@ export default function ReadingsChart({ readings }) {
         <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" angle={-45} textAnchor="end" />
-          <YAxis yAxisId="left" orientation="left" stroke="#F6AD55" />
-          <YAxis yAxisId="right" orientation="right" stroke="#4299E1" />
+          {/* LEFT Y-axis for Temperature */}
+          <YAxis
+            yAxisId="left"
+            orientation="left"
+            stroke="#F6AD55"
+            domain={[tempMin, tempMax]}
+            allowDataOverflow={true}
+          />
+
+          {/* RIGHT Y-axis for Humidity */}
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            stroke="#4299E1"
+            domain={[humMin, humMax]}
+            allowDataOverflow={true}
+          />
           <Tooltip formatter={(value) => (value != null ? value : "N/A")} />
           <Legend verticalAlign="top" height={36} />
           <Line

@@ -19,13 +19,7 @@ import {
   StatHelpText,
 } from "@chakra-ui/react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  FiCpu,
-  FiWifi,
-  FiArrowLeft,
-  FiThermometer,
-  FiDroplet,
-} from "react-icons/fi";
+import { FiCpu, FiWifi, FiArrowLeft, FiThermometer, FiDroplet } from "react-icons/fi";
 import ReadingBox from "../components/ReadingBox";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
@@ -51,18 +45,26 @@ export default function DevicePage() {
     setLoading(true);
     setError("");
 
-    fetch(`${API_URL}/devices/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (res.status === 403) throw new Error("Forbidden — check your token");
-        if (res.status === 404) throw new Error("Device not found");
-        if (!res.ok) throw new Error("Failed to fetch device details");
-        return res.json();
-      })
-      .then((data) => {
-        setDevice(data.device);
-        setReadings(data.readings || []);
+  Promise.all([
+      fetch(`${API_URL}/devices/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      fetch(`${API_URL}/devices/${id}/readings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    ])
+      .then(async ([deviceRes, readingsRes]) => {
+        if (deviceRes.status === 403) throw new Error("Forbidden — check your token");
+        if (deviceRes.status === 404) throw new Error("Device not found");
+        if (!deviceRes.ok) throw new Error("Failed to fetch device details");
+        if (!readingsRes.ok) throw new Error("Failed to fetch device readings");
+
+        const deviceData = await deviceRes.json();
+        const readingsData = await readingsRes.json();
+
+        // unwrap "device" and "readings" if wrapped
+        setDevice(deviceData.device || deviceData);
+        setReadings(readingsData.readings || readingsData);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -93,10 +95,9 @@ export default function DevicePage() {
     uptime,
     status,
     first_registration_timestamp,
-    last_status_update,
+    last_status_update
   } = device;
 
-console.log(device);
   const lastReading = readings[0];
   const lastTemp = lastReading && lastReading.temperature !== null ? `${lastReading.temperature}°C` : "N/A";
   const lastHum = lastReading && lastReading.humidity !== null ? `${lastReading.humidity}%` : "N/A";
@@ -119,7 +120,7 @@ console.log(device);
       {/* Header */}
       <HStack mb={6} spacing={4} align="center">
         <Icon as={FiCpu} boxSize={8} color="blue.500" />
-        <Heading size="lg">{model || "Unknown Device"}</Heading>
+        <Heading size="lg">{device.model || "Unknown Device"}</Heading>
         <Badge colorScheme={online ? "green" : "red"}>
           {online ? "Online" : "Offline"}
         </Badge>
@@ -141,10 +142,10 @@ console.log(device);
           align="center"
           gap={6}
         >
-          {image ? (
+          {device.image ? (
             <Image
-              src={image}
-              alt={model}
+              src={device.image}
+              alt={device.model}
               borderRadius="md"
               maxH="200px"
               objectFit="contain"
@@ -170,39 +171,39 @@ console.log(device);
               <Text as="span" fontWeight="bold">
                 Device ID:
               </Text>{" "}
-              {device_id}
+              {device.device_id}
             </Text>
             <Text>
               <Text as="span" fontWeight="bold">
                 Location:
               </Text>{" "}
-              {location || "Unknown"}
+              {device.location || "Unknown"}
             </Text>
             <Text>
               <Icon as={FiWifi} mr={2} />
               <Text as="span" fontWeight="bold">
                 IP:
               </Text>{" "}
-              {ip_addr || "N/A"}
+              {device.ip_addr || "N/A"}
             </Text>
             <Text>
               <Text as="span" fontWeight="bold">
                 Uptime:
               </Text>{" "}
-              {uptime ? `${uptime}s` : "N/A"}
+              {device.uptime ? `${device.uptime}s` : "N/A"}
             </Text>
             <Text fontSize="sm" color="gray.500">
               Registered:{" "}
-              {new Date(first_registration_timestamp).toLocaleString()}
+              {new Date(device.first_registration_timestamp).toLocaleString()}
             </Text>
             <Text fontSize="sm" color="gray.500">
-              Last update: {new Date(last_status_update).toLocaleString()}
+              Last update: {new Date(device.last_status_update).toLocaleString()}
             </Text>
           </VStack>
         </Flex>
 
         {/* RIGHT: Latest Readings Widget */}
-        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} timestamp={lastReading?.recorded_at}
+        <LatestReadingsWidget temperature={lastTemp} humidity={lastHum} timestamp={lastReading?.time}
 />
       </Grid>
 
@@ -210,26 +211,8 @@ console.log(device);
 
       {/* 📈 Bottom Section: Reading List + Chart */}
       <Flex gap={6} direction={{ base: "column", md: "row" }} align="start">
-        {/* Left: Reading List */}
-        <Box w={{ base: "100%", md: "30%" }}>
-          <Heading size="md" mb={4}>
-            Recent Readings
-          </Heading>
-          {readings.length === 0 ? (
-            <Text color="gray.500">No readings available.</Text>
-          ) : (
-            <Box overflowY="auto" maxH="600px">
-              <VStack spacing={4} align="stretch">
-                {readings.map((r) => (
-                  <ReadingBox key={r.recorded_at} reading={r} />
-                ))}
-              </VStack>
-            </Box>
-          )}
-        </Box>
-
         {/* Right: Chart */}
-        <Box w={{ base: "100%", md: "70%" }}>
+        <Box w={{ base: "100%" }}>
           <Heading size="md" mb={4}>
             Temperature/Humidity Chart
           </Heading>
