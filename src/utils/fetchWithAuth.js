@@ -13,7 +13,11 @@ export async function fetchWithAuth(url, options = {}) {
     // Token expired or invalid
     localStorage.removeItem("token"); // clear invalid token
     window.location.href = "/login";  // redirect immediately
-    return;
+    throw new Error("Unauthorized"); // <-- throw error to keep Promise chain valid
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
 
   return response.json();

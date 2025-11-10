@@ -1,20 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box,
-  Heading,
-  Text,
-  Spinner,
-  Image,
-  HStack,
-  VStack,
-  Badge,
-  Divider,
-  Icon,
-  Grid,
-  Flex,
-  Button,
+  Box, Heading, Text, Spinner, Image, HStack, VStack,
+  Badge, Divider, Icon, Grid, Flex, Button, Input, Stack, FormLabel
 } from "@chakra-ui/react";
+import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
@@ -23,16 +13,36 @@ import LatestReadingsWidget from "../components/LatestReadingsWidget";
 export default function DevicePage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const [device, setDevice] = useState(null);
   const [readings, setReadings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Defaults
-  const defaultStart = new Date().toISOString().split("T")[0]; // today YYYY-MM-DD
-  const defaultEnd = new Date().toISOString().split("T")[0];   // today YYYY-MM-DD
+  const API_URL = import.meta.env.VITE_API_URL;
+
+  // Fetch Device data
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+
+    fetchWithAuth(`${API_URL}/devices/${id}`)
+      .then((data) => {
+        if (data) {
+          setDevice(data.device);
+        }
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const lastReading = device?.last_reading ?? {};
+  const lastTemp = lastReading?.temperature != null ? `${lastReading.temperature}°C` : "N/A";
+  const lastHum = lastReading?.humidity != null ? `${lastReading.humidity}%` : "N/A";
+  const online = device?.last_status_update != null ? isDeviceOnline(device.last_status_update) : 'N/A';
+
+  const defaultStart = new Date().toISOString().split("T")[0]; // today;
+  const defaultEnd = new Date().toISOString().split("T")[0]; // today
   const defaultBucket = "15 minutes";
 
   const [startDate, setStartDate] = useState(defaultStart);
@@ -46,56 +56,40 @@ export default function DevicePage() {
     "1 week","2 weeks","4 weeks","1 month"
   ];
 
-  // Fetch device details
+  // Fetch Device readings
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    // setLoading(true);
+    // setError("");
 
-    fetch(`${API_URL}/devices/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (res.status === 403) throw new Error("Forbidden — check your token");
-        if (res.status === 404) throw new Error("Device not found");
-        if (!res.ok) throw new Error("Failed to fetch device details");
-        return res.json();
+    fetchReadings(id)
+      .then((data) => {
+        if (data) setReadings(data.readings);
       })
-      .then((data) => setDevice(data.device || data))
-      .catch((err) => setError(err.message));
-  }, [id, navigate, API_URL]);
-
-  // Fetch readings
-  const fetchReadings = () => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setLoading(true);
-    setError("");
-
-    const url = `${API_URL}/devices/${id}/readings?start_date=${encodeURIComponent(
-      startDate
-    )}&end_date=${encodeURIComponent(endDate)}&timebucket=${encodeURIComponent(
-      timebucket
-    )}`;
-
-console.log(url);
-    fetch(url, { headers: { Authorization: `Bearer ${token}` } })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch readings");
-        return res.json();
-      })
-      .then((data) => setReadings(data.readings || []))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  }, [id, startDate, endDate, timebucket]);
+
+  // Function to fetch readings
+  const fetchReadings = async (deviceId) => {
+    setError("");
+    
+    const readingsUrl =
+      `${API_URL}/devices/${deviceId}/readings?` +
+      `start_date=${encodeURIComponent(startDate)}` +
+      `&end_date=${encodeURIComponent(endDate)}` +
+      `&timebucket=${encodeURIComponent(timebucket)}`;
+
+    try {
+      const data = await fetchWithAuth(readingsUrl);
+      if (data)
+        return data || [];
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  // Re-fetch readings when params change
-  useEffect(() => {
-    fetchReadings();
-  }, [id, startDate, endDate, timebucket]);
+  if (!device)
+    return null;
 
   if (loading)
     return (
@@ -110,18 +104,6 @@ console.log(url);
         {error}
       </Box>
     );
-
-  if (!device) return null;
-
-  const lastReading = device.last_reading;
-  const lastTemp = lastReading?.temperature != null ? `${lastReading.temperature}°C` : "N/A";
-  const lastHum = lastReading?.humidity != null ? `${lastReading.humidity}%` : "N/A";
-  const online = isDeviceOnline(device.last_status_update);
-
-  const handleClick = (intv, e) => {
-    setStartDate('2025-11-06');
-    setTimebucket(intv); // update timebucket state
-  };
 
   return (
     <Box p={6}>
@@ -139,7 +121,7 @@ console.log(url);
       {/* Header */}
       <HStack mb={6} spacing={4} align="center">
         <Icon as={FiCpu} boxSize={8} color="blue.500" />
-        <Heading size="lg">{device.model || "Unknown Device"}</Heading>
+        <Heading size="lg">{device.model ?? "Unknown Device"}</Heading>
         <Badge colorScheme={online ? "green" : "red"}>
           {online ? "Online" : "Offline"}
         </Badge>
@@ -204,35 +186,61 @@ console.log(url);
       <Divider my={10} />
 
       {/* Chart Section */}
-      <Box w="100%">
-        <Heading size="md" mb={4}>Temperature/Humidity Chart</Heading>
+<Stack spacing={4}>
+  {/* Row 1 — Date inputs with labels */}
+  <HStack spacing={3} align="center">
+    <FormLabel m={0}>From:</FormLabel>
+    <Input
+      type="date"
+      value={startDate}
+      onChange={(e) => {
+        setStartDate(e.target.value);
+        fetchReadings(device.device_id);
+      }}
+      maxW="180px"
+    />
+    <FormLabel m={0}>To:</FormLabel>
+    <Input
+      type="date"
+      value={endDate}
+      onChange={(e) => {
+        setEndDate(e.target.value);
+        fetchReadings(device.device_id);
+      }}
+      maxW="180px"
+    />
+  </HStack>
 
-        <HStack wrap="wrap" mb={4} spacing={2}>
-          {intervals.map((intv) => (
-            <Button
-              key={intv}
-              type="button"
-              size="sm"
-              colorScheme={intv === timebucket ? "blue" : "gray"}
-              onClick={() => handleClick(intv)}
-            >
-              {intv}
-            </Button>
-          ))}
-        </HStack>
+  {/* Row 2 — Timebucket buttons */}
+  <HStack spacing={2}>
+    {intervals.map((intv) => (
+      <Button
+        key={intv}
+        type="button"
+        colorScheme={timebucket === intv ? "blue" : "gray"}
+        onClick={() => {
+          setTimebucket(intv);
+          fetchReadings(device.device_id);
+        }}
+      >
+        {intv}
+      </Button>
+    ))}
+  </HStack>
 
-        <Box
-          borderWidth={1}
-          borderRadius="md"
-          bg="gray.50"
-          minH="300px"
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <ReadingsChart readings={readings} />
-        </Box>
-      </Box>
+  {/* Row 3 — Chart */}
+  <Box
+    borderWidth={1}
+    borderRadius="md"
+    bg="gray.50"
+    minH="300px"
+    display="flex"
+    alignItems="center"
+    justifyContent="center"
+  >
+    <ReadingsChart readings={readings} />
+  </Box>
+</Stack>
     </Box>
   );
 }
