@@ -81,7 +81,6 @@ export default function DevicesPage() {
           newDevices[index] = { ...newDevices[index], ...updatedDevice };
           return newDevices;
         });
-
       } catch (e) {
         console.error("Invalid MQTT payload:", e);
       }
@@ -91,6 +90,14 @@ export default function DevicesPage() {
     client.on("connect", () => client.subscribe("devices/+/status"));
 
     return () => client.end(true); // cleanup on unmount
+  }, []);
+
+    useEffect(() => {
+    const interval = setInterval(() => {
+      setDevices(prev => [...prev]); // trigger re-render to recompute online/offline
+    }, 70000); // check every 70 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   if (loading)
