@@ -19,8 +19,6 @@ export default function DeviceCard({ device }) {
     last_reading
   } = device;
 
-  const online = isDeviceOnline(last_status_update);
-
   return (
     <Box
       p={4}
@@ -61,7 +59,7 @@ export default function DeviceCard({ device }) {
           <VStack align="start" spacing={1} flex={1}>
             <HStack>
               <Text fontWeight="bold" fontSize="2xl">{model || "Unknown Device"}</Text>
-              <Badge colorScheme={online ? "green" : "red"}>{online ? "Online" : "Offline"}</Badge>
+              <Badge colorScheme={isDeviceOnline(last_status_update) ? "green" : "red"}>{isDeviceOnline(last_status_update) ? "Online" : "Offline"}</Badge>
             </HStack>
 
             <Text fontSize="sm" color="gray.600">
@@ -74,7 +72,7 @@ export default function DeviceCard({ device }) {
               <Text as="span" fontWeight="bold">IP:</Text> {ip_addr || "N/A"}
             </Text>
             <Text fontSize="sm" color="gray.600">
-              <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && online ? `${uptime}s` : "N/A"}
+              <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && isDeviceOnline(last_status_update) ? `${uptime}s` : "N/A"}
             </Text>
           </VStack>
         </HStack>

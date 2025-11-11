@@ -3,6 +3,8 @@ import { Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text } from "@c
 import { FiCpu } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { isDeviceOnline } from "../utils/deviceStatus";
+import mqtt from "mqtt";
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState([]);
@@ -10,17 +12,85 @@ export default function DevicesPage() {
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
+  const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+  const MQTT_USER = import.meta.env.VITE_MQTT_USER;
+  const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
 
   useEffect(() => {
     setLoading(true);
     setError("");
-
     fetchWithAuth(`${API_URL}/devices`)
       .then((data) => {
-        if (data) setDevices(data); // undefined if fetchWithAuth redirected
+        if (data) {
+          const enriched = data.map((d) => ({ ...d, lastUpdate: null }));
+          setDevices(enriched);
+        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+
+    // --- Connect to HiveMQ WebSocket ---
+    const client = mqtt.connect(MQTT_BROKER, {
+      username: MQTT_USER,
+      password: MQTT_PASS,
+      protocol: "wss",
+      rejectUnauthorized: false
+    });
+
+    client.on("connect", () => console.log("✅ Connected to HiveMQ via WebSocket"));
+
+    client.subscribe("devices/+/status", (err) => {
+      if (err) console.error("❌ Subscribe error:", err);
+      else console.log("✅ Subscribed to all device status topics");
+    });
+
+    client.on("message", (topic, message) => {
+      try {
+        const payload = JSON.parse(message.toString());
+        const timestamp = Date.now(); // for flash effect
+
+        const statusMatch = topic.match(/^devices\/(.+)\/status$/);
+        if (!statusMatch) return;
+
+        const deviceId = statusMatch[1];
+
+        // Flatten sensors_data into top-level lastReading
+        const lastReading = {
+          id: timestamp,
+          time: new Date(payload.timestamp).toISOString(),
+          ...payload.sensors_data
+        };
+
+        setDevices(prev => {
+          const index = prev.findIndex(d => d.device_id === payload.id);
+
+          const updatedDevice = {
+            device_id: payload.id,
+            sensors: payload.sensors_data,          // for display boxes
+            uptime: payload.uptime,
+            lastUpdate: timestamp,                  // triggers flash
+            last_reading: lastReading,              // flat sensors object
+            last_status_update: timestamp
+          };
+
+          if (index === -1) {
+            return [...prev, updatedDevice];
+          }
+
+          const newDevices = [...prev];
+          newDevices[index] = { ...newDevices[index], ...updatedDevice };
+          return newDevices;
+        });
+
+      } catch (e) {
+        console.error("Invalid MQTT payload:", e);
+      }
+    });
+
+    // Subscribe to all device status topics
+    client.on("connect", () => client.subscribe("devices/+/status"));
+
+    return () => client.end(true); // cleanup on unmount
   }, []);
 
   if (loading)
@@ -52,7 +122,10 @@ export default function DevicesPage() {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
           {devices.map((device) => (
-            <DeviceCard key={device.device_id || device.id} device={device} />
+            <DeviceCard
+              key={device.device_id || device.id}
+              device={device}
+            />
           ))}
         </SimpleGrid>
       )}
