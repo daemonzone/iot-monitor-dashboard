@@ -2,9 +2,12 @@
 import { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Box, Text } from "@chakra-ui/react";
 
-export default function ReadingsChart({ readings }) {
+export default function ReadingsChart({ data }) {
+  const sensor = data.sensor;
+  const readings = data.buckets;
+
   if (!readings || readings.length === 0) {
-    return <Text color="gray.500">No readings to display.</Text>;
+    return <Text color="gray.500">No data available to display.</Text>;
   }
 
   // Sort readings by time ascending
@@ -15,27 +18,21 @@ export default function ReadingsChart({ readings }) {
   const lastDay = new Date(sortedReadings[sortedReadings.length - 1].time).toDateString();
   const showDates = firstDay !== lastDay;
 
-  // Prepare chart data with appropriate x-axis labels
+  // Prepare chart data with appropriate x-axis label
   const chartData = sortedReadings.map((r) => {
     const date = new Date(r.time);
     const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const dateLabel = `${date.getDate().toString().padStart(2,'0')}/${(date.getMonth()+1).toString().padStart(2,'0')}`;
     return {
       time: showDates ? `${dateLabel} ${timeLabel}` : timeLabel,
-      temperature: r.temperature,
-      humidity: r.humidity,
+      value: r.value
     };
   });
 
   // Compute min/max for temperature
-  const tempValues = chartData.map(d => d.temperature);
-  const tempMin = Math.min(...tempValues);
-  const tempMax = Math.max(...tempValues);
-
-  // Compute min/max for humidity
-  const humValues = chartData.map(d => d.humidity);
-  const humMin = Math.min(...humValues);
-  const humMax = Math.max(...humValues);
+  const values = chartData.map(d => d.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
 
   return (
     <Box
@@ -51,21 +48,12 @@ export default function ReadingsChart({ readings }) {
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="time" angle={-45} textAnchor="end" interval={0} style={{ fontSize: '10px' }} />
           
-          {/* LEFT Y-axis for Temperature */}
+          {/* LEFT Y-axis */}
           <YAxis
             yAxisId="left"
             orientation="left"
             stroke="#F6AD55"
-            domain={[tempMin, tempMax]}
-            allowDataOverflow={true}
-          />
-
-          {/* RIGHT Y-axis for Humidity */}
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            stroke="#4299E1"
-            domain={[humMin, humMax]}
+            domain={[min, max]}
             allowDataOverflow={true}
           />
 
@@ -75,20 +63,10 @@ export default function ReadingsChart({ readings }) {
           <Line
             yAxisId="left"
             type="monotone"
-            dataKey="temperature"
+            dataKey="value"
             stroke="#F6AD55"
             activeDot={{ r: 6 }}
-            name="Temperature (°C)"
-            connectNulls
-          />
-
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="humidity"
-            stroke="#4299E1"
-            activeDot={{ r: 6 }}
-            name="Humidity (%)"
+            name={sensor.name}
             connectNulls
           />
         </LineChart>

@@ -15,7 +15,7 @@ export default function DevicePage() {
   const navigate = useNavigate();
 
   const [device, setDevice] = useState(null);
-  const [readings, setReadings] = useState([]);
+  const [sensors, setSensors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -28,9 +28,8 @@ export default function DevicePage() {
 
     fetchWithAuth(`${API_URL}/devices/${id}`)
       .then((data) => {
-        if (data) {
+        if (data)
           setDevice(data.device);
-        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -63,7 +62,7 @@ export default function DevicePage() {
 
     fetchReadings(id)
       .then((data) => {
-        if (data) setReadings(data.readings);
+        if (data) setSensors(data.readings);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -186,61 +185,72 @@ export default function DevicePage() {
       <Divider my={10} />
 
       {/* Chart Section */}
-<Stack spacing={4}>
-  {/* Row 1 — Date inputs with labels */}
-  <HStack spacing={3} align="center">
-    <FormLabel m={0}>From:</FormLabel>
-    <Input
-      type="date"
-      value={startDate}
-      onChange={(e) => {
-        setStartDate(e.target.value);
-        fetchReadings(device.device_id);
-      }}
-      maxW="180px"
-    />
-    <FormLabel m={0}>To:</FormLabel>
-    <Input
-      type="date"
-      value={endDate}
-      onChange={(e) => {
-        setEndDate(e.target.value);
-        fetchReadings(device.device_id);
-      }}
-      maxW="180px"
-    />
-  </HStack>
+      <Stack spacing={4}>
+        {/* Row 1 — Date inputs with labels */}
+        <HStack spacing={3} align="center">
+          <FormLabel m={0}>From:</FormLabel>
+          <Input
+            type="date"
+            value={startDate}
+            onChange={(e) => {
+              setStartDate(e.target.value);
+              fetchReadings(device.device_id);
+            }}
+            maxW="180px"
+          />
+          <FormLabel m={0}>To:</FormLabel>
+          <Input
+            type="date"
+            value={endDate}
+            onChange={(e) => {
+              setEndDate(e.target.value);
+              fetchReadings(device.device_id);
+            }}
+            maxW="180px"
+          />
+        </HStack>
 
-  {/* Row 2 — Timebucket buttons */}
-  <HStack spacing={2}>
-    {intervals.map((intv) => (
-      <Button
-        key={intv}
-        type="button"
-        colorScheme={timebucket === intv ? "blue" : "gray"}
-        onClick={() => {
-          setTimebucket(intv);
-          fetchReadings(device.device_id);
-        }}
-      >
-        {intv}
-      </Button>
-    ))}
-  </HStack>
+        {/* Row 2 — Timebucket buttons */}
+        <HStack spacing={2}>
+          {intervals.map((intv) => (
+            <Button
+              key={intv}
+              type="button"
+              colorScheme={timebucket === intv ? "blue" : "gray"}
+              onClick={() => {
+                setTimebucket(intv);
+                fetchReadings(device.device_id);
+              }}
+            >
+              {intv}
+            </Button>
+          ))}
+        </HStack>
 
-  {/* Row 3 — Chart */}
-  <Box
-    borderWidth={1}
-    borderRadius="md"
-    bg="gray.50"
-    minH="300px"
-    display="flex"
-    alignItems="center"
-    justifyContent="center"
-  >
-    <ReadingsChart readings={readings} />
-  </Box>
-</Stack>
+        {/* Row 3 — Chart */}        
+        {sensors.map((s) => (
+          <div key={s.sensor.code} style={{ width: "100%", marginBottom: "2rem" }}>
+            {/* Chart title */}
+            <Flex justify="center" mb={2} mt={2}>
+              <Heading size="md">{s.sensor.name} ({s.sensor.unit})</Heading>
+            </Flex>
+
+            {/* Chart container */}
+            <Box
+              borderWidth={1}
+              borderRadius="md"
+              bg="gray.50"
+              minH="300px"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              w="full"
+            >
+              <ReadingsChart data={s} />
+            </Box>
+          </div>
+        ))}
+      </Stack>
     </Box>
   );
 }
