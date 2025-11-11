@@ -1,12 +1,15 @@
+import { useEffect, useState } from "react";
 import { Box, Image, Text, HStack, VStack, Badge, Icon, Flex } from "@chakra-ui/react";
 import { FiCpu } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";  // ⬅️ this is required
+import { useNavigate } from "react-router-dom";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import DeviceLastReadingsBox from "../components/DeviceLastReadingsBox";
 
 export default function DeviceCard({ device }) {
   const navigate = useNavigate();
   if (!device) return null;
+
+  const [flash, setFlash] = useState(false);
 
   const {
     device_id,
@@ -16,8 +19,20 @@ export default function DeviceCard({ device }) {
     ip_addr,
     uptime,
     last_status_update,
-    last_reading
+    last_reading,
+    lastUpdate
   } = device;
+
+  // Trigger flash whenever lastUpdate changes
+  useEffect(() => {
+    if (lastUpdate) {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 1000); // 1 second flash
+      return () => clearTimeout(t);
+    }
+  }, [lastUpdate]);
+
+  const online = isDeviceOnline(last_status_update);
 
   return (
     <Box
@@ -25,9 +40,9 @@ export default function DeviceCard({ device }) {
       borderWidth={1}
       borderRadius="md"
       shadow="sm"
-      bg="gray.50"
+      bg={flash ? "blue.100" : "gray.50"}  // highlight when flash is true
       cursor="pointer"
-      transition="all 0.2s"
+      transition="all 0.3s"
       _hover={{ shadow: "md", transform: "translateY(-2px)" }}
       onClick={() => navigate(`/devices/${device_id}`)}
     >
@@ -59,7 +74,7 @@ export default function DeviceCard({ device }) {
           <VStack align="start" spacing={1} flex={1}>
             <HStack>
               <Text fontWeight="bold" fontSize="2xl">{model || "Unknown Device"}</Text>
-              <Badge colorScheme={isDeviceOnline(last_status_update) ? "green" : "red"}>{isDeviceOnline(last_status_update) ? "Online" : "Offline"}</Badge>
+              <Badge colorScheme={online ? "green" : "red"}>{online ? "Online" : "Offline"}</Badge>
             </HStack>
 
             <Text fontSize="sm" color="gray.600">
@@ -72,13 +87,13 @@ export default function DeviceCard({ device }) {
               <Text as="span" fontWeight="bold">IP:</Text> {ip_addr || "N/A"}
             </Text>
             <Text fontSize="sm" color="gray.600">
-              <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && isDeviceOnline(last_status_update) ? `${uptime}s` : "N/A"}
+              <Text as="span" fontWeight="bold">Uptime:</Text> {uptime && online ? `${uptime}s` : "N/A"}
             </Text>
           </VStack>
         </HStack>
 
         {/* Right: Last readings */}
-        <DeviceLastReadingsBox lastReading={device.last_reading || { temperature: '-', humidity: '-' }} />
+        <DeviceLastReadingsBox lastReading={last_reading || { temperature: '-', humidity: '-' }} />
       </Flex>
     </Box>
   );
