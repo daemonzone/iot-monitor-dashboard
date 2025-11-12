@@ -28,8 +28,12 @@ export default function DevicePage() {
 
     fetchWithAuth(`${API_URL}/devices/${id}`)
       .then((data) => {
-        if (data)
+        if (data && data.device) {
           setDevice(data.device);
+        } else {
+          setError("Device not found"); // handle 404
+          setDevice(null);
+        }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -57,9 +61,6 @@ export default function DevicePage() {
 
   // Fetch Device readings
   useEffect(() => {
-    // setLoading(true);
-    // setError("");
-
     fetchReadings(id)
       .then((data) => {
         if (data) setSensors(data.readings);
@@ -87,9 +88,6 @@ export default function DevicePage() {
     }
   };
 
-  if (!device)
-    return null;
-
   if (loading)
     return (
       <Box mt={10} textAlign="center">
@@ -97,10 +95,10 @@ export default function DevicePage() {
       </Box>
     );
 
-  if (error)
+  if (error || !device)
     return (
       <Box mt={10} textAlign="center" color="red.500">
-        {error}
+        Device not found
       </Box>
     );
 
@@ -185,6 +183,7 @@ export default function DevicePage() {
       <Divider my={10} />
 
       {/* Chart Section */}
+      { sensors.length != 0 ? (
       <Stack spacing={4}>
         {/* Row 1 — Date inputs with labels */}
         <HStack spacing={3} align="center">
@@ -251,6 +250,11 @@ export default function DevicePage() {
           </div>
         ))}
       </Stack>
+      ) : (
+        <Stack spacing={4} align="center" justify="center" minH="100px">
+          <Text>No sensors data available.</Text>
+        </Stack>
+      )}
     </Box>
   );
 }
