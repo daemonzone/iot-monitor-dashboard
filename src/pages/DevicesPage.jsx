@@ -4,6 +4,7 @@ import { FiCpu, FiActivity } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { isDeviceOnline } from "../utils/deviceStatus";
+import { useMonitorStatus, HEARTBEAT_TTL } from "../utils/monitorStatus"
 import mqtt from "mqtt";
 
 export default function DevicesPage() {
@@ -16,8 +17,7 @@ export default function DevicesPage() {
   const MQTT_USER = import.meta.env.VITE_MQTT_USER;
   const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
 
-  const HEARTBEAT_TTL = 60; // seconds
-  const [monitorOnline, setMonitorOnline] = useState(null);
+  const { monitorOnline, setLastHeartbeat } = useMonitorStatus();
 
   useEffect(() => {
     setLoading(true);
@@ -57,9 +57,10 @@ export default function DevicesPage() {
         // Parse the JSON message
         const data = JSON.parse(message.toString());
         console.log('Last heartbeat:', data.last_heartbeat_timestamp);
-  
-        const current_timestamp = Math.floor(Date.now() / 1000);
-        setMonitorOnline(current_timestamp <= data.last_heartbeat_timestamp + HEARTBEAT_TTL);
+
+        const ts = data.last_heartbeat_timestamp;
+        localStorage.setItem("monitor_heartbeat", ts);
+        setLastHeartbeat(ts);
       }
 
       try {
