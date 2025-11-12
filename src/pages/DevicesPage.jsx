@@ -47,7 +47,7 @@ export default function DevicesPage() {
       if (err) console.error("❌ Subscribe error:", err);
     });
 
-    client.subscribe("devices/+/status", (err) => {
+    client.subscribe("websockets/+/status", (err) => {
       if (err) console.error("❌ Subscribe error:", err);
     });
 
@@ -56,7 +56,6 @@ export default function DevicesPage() {
 
         // Parse the JSON message
         const data = JSON.parse(message.toString());
-        console.log('Last heartbeat:', data.last_heartbeat_timestamp);
 
         const ts = data.last_heartbeat_timestamp;
         localStorage.setItem("monitor_heartbeat", ts);
@@ -67,7 +66,7 @@ export default function DevicesPage() {
         const payload = JSON.parse(message.toString());
         const timestamp = Date.now(); // for flash effect
 
-        const statusMatch = topic.match(/^devices\/(.+)\/status$/);
+        const statusMatch = topic.match(/^websockets\/(.+)\/status$/);
         if (!statusMatch) return;
 
         const deviceId = statusMatch[1];
