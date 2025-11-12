@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text } from "@chakra-ui/react";
-import { FiCpu } from "react-icons/fi";
+import { Flex, Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text } from "@chakra-ui/react";
+import { FiCpu, FiActivity } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { isDeviceOnline } from "../utils/deviceStatus";
@@ -15,6 +15,9 @@ export default function DevicesPage() {
   const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
   const MQTT_USER = import.meta.env.VITE_MQTT_USER;
   const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
+
+  const HEARTBEAT_TTL = 60; // seconds
+  const [monitorOnline, setMonitorOnline] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -37,14 +40,28 @@ export default function DevicesPage() {
       rejectUnauthorized: false
     });
 
-    client.on("connect", () => console.log("✅ Connected to HiveMQ via WebSocket"));
+    client.on("connect", () => console.log("✅ Connected to HiveMQ WebSocket"));
+
+    // Subscribe to the monitor-status topic
+    client.subscribe('monitor/status', (err) => {
+      if (err) console.error("❌ Subscribe error:", err);
+    });
 
     client.subscribe("devices/+/status", (err) => {
       if (err) console.error("❌ Subscribe error:", err);
-      else console.log("✅ Subscribed to all device status topics");
     });
 
     client.on("message", (topic, message) => {
+      if (topic === 'monitor/status') {
+
+        // Parse the JSON message
+        const data = JSON.parse(message.toString());
+        console.log('Last heartbeat:', data.last_heartbeat_timestamp);
+  
+        const current_timestamp = Math.floor(Date.now() / 1000);
+        setMonitorOnline(current_timestamp <= data.last_heartbeat_timestamp + HEARTBEAT_TTL);
+      }
+
       try {
         const payload = JSON.parse(message.toString());
         const timestamp = Date.now(); // for flash effect
@@ -100,6 +117,28 @@ export default function DevicesPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Determine monitor status badge content and color
+  let badgeContent;
+  let badgeColor;
+  if (monitorOnline === null) {
+    badgeContent = (
+      <HStack spacing={2}>
+        <Spinner size="xs" /> 
+        <FiActivity />
+        <Text>Waiting for Monitor status</Text>
+      </HStack>
+    );
+    badgeColor = "yellow";
+  } else {
+    badgeContent = (
+      <HStack spacing={2}>
+        <FiActivity />
+        <Text>Monitor {monitorOnline ? "Online" : "Offline"}</Text>
+      </HStack>
+    );
+    badgeColor = monitorOnline ? "green" : "red";
+  }
+
   if (loading)
     return (
       <Box mt={10} textAlign="center">
@@ -116,13 +155,26 @@ export default function DevicesPage() {
 
   return (
     <Box p={6}>
-      <HStack mb={6} spacing={3}>
-        <Icon as={FiCpu} boxSize={7} color="blue.500" />
-        <Heading size="lg">Devices</Heading>
-        <Badge colorScheme="blue" fontSize="md">
-          {devices.length}
+      <Flex mb={6} align="center" justify="space-between">
+        <HStack spacing={3}>
+          <Icon as={FiCpu} boxSize={7} color="blue.500" />
+          <Heading size="lg">Devices</Heading>
+          <Badge colorScheme="blue" fontSize="md">
+            {devices.length}
+          </Badge>
+        </HStack>
+
+        {/* Right-aligned Monitor Status */}
+        <Badge
+          colorScheme={badgeColor}
+          fontSize="sm"
+          px={3}
+          py={1}
+          borderRadius="full"
+        >
+          {badgeContent}
         </Badge>
-      </HStack>
+      </Flex>
 
       {devices.length === 0 ? (
         <Text color="gray.500">No devices available.</Text>
