@@ -42,7 +42,8 @@ export default function DevicePage() {
     fetchWithAuth(`${API_URL}/devices/${id}`)
       .then((data) => {
         if (data && data.device) {
-          setDevice(data.device);        
+          setDevice(data.device);
+          setLastReading(data.device.last_reading)
         } else {
           setError("Device not found"); // handle 404
           setDevice(null);
