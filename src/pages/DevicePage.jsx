@@ -9,6 +9,7 @@ import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
+import mqtt from "mqtt";
 
 export default function DevicePage() {
   const { id } = useParams();
@@ -16,10 +17,22 @@ export default function DevicePage() {
 
   const [device, setDevice] = useState(null);
   const [sensors, setSensors] = useState([]);
+  const [lastReading, setLastReading] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
+  const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
+  const MQTT_USER = import.meta.env.VITE_MQTT_USER;
+  const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
+
+  // --- Connect to HiveMQ WebSocket ---
+  const client = mqtt.connect(MQTT_BROKER, {
+    username: MQTT_USER,
+    password: MQTT_PASS,
+    protocol: "wss",
+    rejectUnauthorized: false
+  });
 
   // Fetch Device data
   useEffect(() => {
@@ -29,7 +42,7 @@ export default function DevicePage() {
     fetchWithAuth(`${API_URL}/devices/${id}`)
       .then((data) => {
         if (data && data.device) {
-          setDevice(data.device);
+          setDevice(data.device);        
         } else {
           setError("Device not found"); // handle 404
           setDevice(null);
@@ -39,7 +52,48 @@ export default function DevicePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const lastReading = device?.last_reading ?? {};
+  useEffect(() => {
+    const onConnect = () => {
+      console.log("✅ Connected to HiveMQ WebSocket");
+      client.subscribe(`websockets/${id}/status`, (err) => {
+        if (err) console.error("❌ Subscribe error:", err);
+      });
+    };
+
+    const onMessage = (topic, message) => {
+      try {
+        const payload = JSON.parse(message.toString());
+
+        const newLastReading = {
+          id: payload.timestamp,
+          time: new Date(payload.timestamp).toISOString(),
+          ...payload.sensors_data
+        };
+
+        setLastReading(newLastReading);
+
+        if (payload.uptime || payload.timestamp) {
+          setDevice(prev => ({
+            ...prev,
+            uptime: payload.uptime ?? prev.uptime,
+            last_status_update: payload.timestamp ?? prev.last_status_update
+          }));
+        }
+      } catch (e) {
+        console.error("Invalid MQTT payload:", e);
+      }
+    };
+
+    client.on("connect", onConnect);
+    client.on("message", onMessage);
+
+    return () => {
+      // Remove the exact same function references
+      client.removeListener("connect", onConnect);
+      client.removeListener("message", onMessage);
+    };
+  }, []);
+
   const lastTemp = lastReading?.temperature != null ? `${lastReading.temperature}°C` : "N/A";
   const lastHum = lastReading?.humidity != null ? `${lastReading.humidity}%` : "N/A";
   const online = device?.last_status_update != null ? isDeviceOnline(device.last_status_update) : 'N/A';
