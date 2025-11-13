@@ -4,7 +4,7 @@ import { FiCpu, FiActivity } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
 import { useMonitorStatus } from "../utils/monitorStatus";
-import { useMqtt } from "../context/MqttProvider";
+import { useMqtt } from "../context/mqttProvider";
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState([]);

@@ -9,7 +9,7 @@ import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
-import { useMqtt } from "../context/MqttProvider";
+import { useMqtt } from "../context/mqttProvider";
 
 export default function DevicePage() {
   const { id } = useParams();
