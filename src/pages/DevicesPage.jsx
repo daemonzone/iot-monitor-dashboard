@@ -3,9 +3,8 @@ import { Flex, Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text } fr
 import { FiCpu, FiActivity } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { isDeviceOnline } from "../utils/deviceStatus";
-import { useMonitorStatus, HEARTBEAT_TTL } from "../utils/monitorStatus"
-import mqtt from "mqtt";
+import { useMonitorStatus } from "../utils/monitorStatus";
+import { useMqtt } from "../context/MqttProvider";
 
 export default function DevicesPage() {
   const [devices, setDevices] = useState([]);
@@ -13,15 +12,14 @@ export default function DevicesPage() {
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
-  const MQTT_USER = import.meta.env.VITE_MQTT_USER;
-  const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
-
   const { monitorOnline, setLastHeartbeat } = useMonitorStatus();
+  const { client, connected } = useMqtt(); // get shared MQTT client
 
+  // Fetch devices once
   useEffect(() => {
     setLoading(true);
     setError("");
+
     fetchWithAuth(`${API_URL}/devices`)
       .then((data) => {
         if (data) {
@@ -31,68 +29,49 @@ export default function DevicesPage() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+  }, []);
 
-    // --- Connect to HiveMQ WebSocket ---
-    const client = mqtt.connect(MQTT_BROKER, {
-      username: MQTT_USER,
-      password: MQTT_PASS,
-      protocol: "wss",
-      rejectUnauthorized: false
-    });
+  // Handle MQTT messages
+  useEffect(() => {
+    if (!client || !connected) return;
 
-    client.on("connect", () => console.log("✅ Connected to HiveMQ WebSocket"));
+    // Subscribe to relevant topics
+    client.subscribe("monitor/status", (err) => err && console.error(err));
+    client.subscribe("websockets/+/status", (err) => err && console.error(err));
 
-    // Subscribe to the monitor-status topic
-    client.subscribe('monitor/status', (err) => {
-      if (err) console.error("❌ Subscribe error:", err);
-    });
-
-    client.subscribe("websockets/+/status", (err) => {
-      if (err) console.error("❌ Subscribe error:", err);
-    });
-
-    client.on("message", (topic, message) => {
-      if (topic === 'monitor/status') {
-
-        // Parse the JSON message
-        const data = JSON.parse(message.toString());
-
-        const ts = data.last_heartbeat_timestamp;
-        localStorage.setItem("monitor_heartbeat", ts);
-        setLastHeartbeat(ts);
-      }
-
+    const handleMessage = (topic, message) => {
       try {
         const payload = JSON.parse(message.toString());
-        const timestamp = Date.now(); // for flash effect
+        const timestamp = Date.now();
+
+        if (topic === "monitor/status") {
+          const ts = payload.last_heartbeat_timestamp;
+          localStorage.setItem("monitor_heartbeat", ts);
+          setLastHeartbeat(ts);
+          return;
+        }
 
         const statusMatch = topic.match(/^websockets\/(.+)\/status$/);
         if (!statusMatch) return;
 
-        const deviceId = statusMatch[1];
-
-        // Flatten sensors_data into top-level lastReading
         const lastReading = {
           id: timestamp,
           time: new Date(payload.timestamp).toISOString(),
-          ...payload.sensors_data
+          ...payload.sensors_data,
         };
 
-        setDevices(prev => {
-          const index = prev.findIndex(d => d.device_id === payload.id);
-
+        setDevices((prev) => {
+          const index = prev.findIndex((d) => d.device_id === payload.id);
           const updatedDevice = {
             device_id: payload.id,
-            sensors: payload.sensors_data,          // for display boxes
+            sensors: payload.sensors_data,
             uptime: payload.uptime,
-            lastUpdate: timestamp,                  // triggers flash
-            last_reading: lastReading,              // flat sensors object
-            last_status_update: timestamp
+            lastUpdate: timestamp, // triggers flash effect
+            last_reading: lastReading,
+            last_status_update: timestamp,
           };
 
-          if (index === -1) {
-            return [...prev, updatedDevice];
-          }
+          if (index === -1) return [...prev, updatedDevice];
 
           const newDevices = [...prev];
           newDevices[index] = { ...newDevices[index], ...updatedDevice };
@@ -101,29 +80,29 @@ export default function DevicesPage() {
       } catch (e) {
         console.error("Invalid MQTT payload:", e);
       }
-    });
+    };
 
-    // Subscribe to all device status topics
-    client.on("connect", () => client.subscribe("devices/+/status"));
+    client.on("message", handleMessage);
 
-    return () => client.end(true); // cleanup on unmount
-  }, []);
+    return () => client.off("message", handleMessage);
+  }, [client, connected]);
 
-    useEffect(() => {
+  // Trigger re-render for online/offline computation
+  useEffect(() => {
     const interval = setInterval(() => {
-      setDevices(prev => [...prev]); // trigger re-render to recompute online/offline
-    }, 70000); // check every 70 seconds
+      setDevices((prev) => [...prev]);
+    }, 70000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Determine monitor status badge content and color
+  // Determine monitor badge
   let badgeContent;
   let badgeColor;
   if (monitorOnline === null) {
     badgeContent = (
       <HStack spacing={2}>
-        <Spinner size="xs" /> 
+        <Spinner size="xs" />
         <FiActivity />
         <Text>Waiting for Monitor status</Text>
       </HStack>
@@ -164,14 +143,7 @@ export default function DevicesPage() {
           </Badge>
         </HStack>
 
-        {/* Right-aligned Monitor Status */}
-        <Badge
-          colorScheme={badgeColor}
-          fontSize="sm"
-          px={3}
-          py={1}
-          borderRadius="full"
-        >
+        <Badge colorScheme={badgeColor} fontSize="sm" px={3} py={1} borderRadius="full">
           {badgeContent}
         </Badge>
       </Flex>
@@ -181,10 +153,7 @@ export default function DevicesPage() {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
           {devices.map((device) => (
-            <DeviceCard
-              key={device.device_id || device.id}
-              device={device}
-            />
+            <DeviceCard key={device.device_id || device.id} device={device} />
           ))}
         </SimpleGrid>
       )}

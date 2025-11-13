@@ -9,7 +9,7 @@ import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
-import mqtt from "mqtt";
+import { useMqtt } from "../context/MqttProvider";
 
 export default function DevicePage() {
   const { id } = useParams();
@@ -22,17 +22,8 @@ export default function DevicePage() {
   const [error, setError] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL;
-  const MQTT_BROKER = import.meta.env.VITE_MQTT_BROKER;
-  const MQTT_USER = import.meta.env.VITE_MQTT_USER;
-  const MQTT_PASS = import.meta.env.VITE_MQTT_PASS;
 
-  // --- Connect to HiveMQ WebSocket ---
-  const client = mqtt.connect(MQTT_BROKER, {
-    username: MQTT_USER,
-    password: MQTT_PASS,
-    protocol: "wss",
-    rejectUnauthorized: false
-  });
+  const { client, connected } = useMqtt(); // shared MQTT client
 
   // Fetch Device data
   useEffect(() => {
@@ -43,63 +34,59 @@ export default function DevicePage() {
       .then((data) => {
         if (data && data.device) {
           setDevice(data.device);
-          setLastReading(data.device.last_reading)
+          setLastReading(data.device.last_reading || {});
         } else {
-          setError("Device not found"); // handle 404
+          setError("Device not found");
           setDevice(null);
         }
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [id]);
 
+  // Subscribe to MQTT updates for this device
   useEffect(() => {
-    const onConnect = () => {
-      console.log("✅ Connected to HiveMQ WebSocket");
-      client.subscribe(`websockets/${id}/status`, (err) => {
-        if (err) console.error("❌ Subscribe error:", err);
-      });
-    };
+    if (!client || !connected) return;
 
-    const onMessage = (topic, message) => {
+    const topic = `websockets/${id}/status`;
+
+    const handleMessage = (topicMsg, message) => {
+      if (topicMsg !== topic) return;
+
       try {
         const payload = JSON.parse(message.toString());
 
         const newLastReading = {
           id: payload.timestamp,
           time: new Date(payload.timestamp).toISOString(),
-          ...payload.sensors_data
+          ...payload.sensors_data,
         };
-
         setLastReading(newLastReading);
 
-        if (payload.uptime || payload.timestamp) {
-          setDevice(prev => ({
-            ...prev,
-            uptime: payload.uptime ?? prev.uptime,
-            last_status_update: payload.timestamp ?? prev.last_status_update
-          }));
-        }
+        setDevice((prev) => prev ? {
+          ...prev,
+          uptime: payload.uptime ?? prev.uptime,
+          last_status_update: payload.timestamp ?? prev.last_status_update
+        } : prev);
+
       } catch (e) {
         console.error("Invalid MQTT payload:", e);
       }
     };
 
-    client.on("connect", onConnect);
-    client.on("message", onMessage);
+    client.subscribe(topic, (err) => err && console.error("Subscribe error:", err));
+    client.on("message", handleMessage);
 
     return () => {
-      // Remove the exact same function references
-      client.removeListener("connect", onConnect);
-      client.removeListener("message", onMessage);
+      client.off("message", handleMessage);
     };
-  }, []);
+  }, [client, connected, id]);
 
   const lastTemp = lastReading?.temperature != null ? `${lastReading.temperature}°C` : "N/A";
   const lastHum = lastReading?.humidity != null ? `${lastReading.humidity}%` : "N/A";
   const online = device?.last_status_update != null ? isDeviceOnline(device.last_status_update) : 'N/A';
 
-  const defaultStart = new Date().toISOString().split("T")[0]; // today;
+  const defaultStart = new Date().toISOString().split("T")[0]; // today
   const defaultEnd = new Date().toISOString().split("T")[0]; // today
   const defaultBucket = "15 minutes";
 
@@ -116,30 +103,24 @@ export default function DevicePage() {
 
   // Fetch Device readings
   useEffect(() => {
-    fetchReadings(id)
-      .then((data) => {
-        if (data) setSensors(data.readings);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    fetchReadings();
   }, [id, startDate, endDate, timebucket]);
 
-  // Function to fetch readings
-  const fetchReadings = async (deviceId) => {
+  const fetchReadings = async () => {
     setError("");
-    
-    const readingsUrl =
-      `${API_URL}/devices/${deviceId}/readings?` +
-      `start_date=${encodeURIComponent(startDate)}` +
-      `&end_date=${encodeURIComponent(endDate)}` +
-      `&timebucket=${encodeURIComponent(timebucket)}`;
-
     try {
-      const data = await fetchWithAuth(readingsUrl);
-      if (data)
-        return data || [];
+      const url =
+        `${API_URL}/devices/${id}/readings?` +
+        `start_date=${encodeURIComponent(startDate)}` +
+        `&end_date=${encodeURIComponent(endDate)}` +
+        `&timebucket=${encodeURIComponent(timebucket)}`;
+
+      const data = await fetchWithAuth(url);
+      if (data) setSensors(data.readings || []);
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -238,58 +219,43 @@ export default function DevicePage() {
       <Divider my={10} />
 
       {/* Chart Section */}
-      { sensors.length != 0 ? (
+      { sensors.length !== 0 ? (
       <Stack spacing={4}>
-        {/* Row 1 — Date inputs with labels */}
         <HStack spacing={3} align="center">
           <FormLabel m={0}>From:</FormLabel>
           <Input
             type="date"
             value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              fetchReadings(device.device_id);
-            }}
+            onChange={(e) => setStartDate(e.target.value)}
             maxW="180px"
           />
           <FormLabel m={0}>To:</FormLabel>
           <Input
             type="date"
             value={endDate}
-            onChange={(e) => {
-              setEndDate(e.target.value);
-              fetchReadings(device.device_id);
-            }}
+            onChange={(e) => setEndDate(e.target.value)}
             maxW="180px"
           />
         </HStack>
 
-        {/* Row 2 — Timebucket buttons */}
         <HStack spacing={2}>
           {intervals.map((intv) => (
             <Button
               key={intv}
               type="button"
               colorScheme={timebucket === intv ? "blue" : "gray"}
-              onClick={() => {
-                setTimebucket(intv);
-                fetchReadings(device.device_id);
-              }}
+              onClick={() => setTimebucket(intv)}
             >
               {intv}
             </Button>
           ))}
         </HStack>
 
-        {/* Row 3 — Chart */}        
         {sensors.map((s) => (
           <div key={s.sensor.code} style={{ width: "100%", marginBottom: "2rem" }}>
-            {/* Chart title */}
             <Flex justify="center" mb={2} mt={2}>
               <Heading size="md">{s.sensor.name} ({s.sensor.unit})</Heading>
             </Flex>
-
-            {/* Chart container */}
             <Box
               borderWidth={1}
               borderRadius="md"
