@@ -64,7 +64,7 @@ export default function DevicesPage() {
           const index = prev.findIndex((d) => d.device_id === payload.id);
           const updatedDevice = {
             device_id: payload.id,
-            sensors: payload.sensors_data,
+            sensors_data: [payload.sensors_data],
             uptime: payload.uptime,
             lastUpdate: timestamp, // triggers flash effect
             last_reading: lastReading,

@@ -9,6 +9,7 @@ import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
+import { SensorsIconsList, SensorIcon } from "../utils/sensorsUtils.jsx";
 import { useMqtt } from "../context/mqttProvider";
 
 export default function DevicePage() {
@@ -156,7 +157,7 @@ export default function DevicePage() {
         <Icon as={FiCpu} boxSize={8} color="blue.500" />
         <Heading size="lg">{device.model ?? "Unknown Device"}</Heading>
         <Badge colorScheme={online ? "green" : "red"}>
-          {online ? "Online" : "Offline"}
+          <Icon as={FiWifi} verticalAlign="middle" mb={1} mr={1} />{online ? "Online" : "Offline"}
         </Badge>
       </HStack>
 
@@ -197,7 +198,11 @@ export default function DevicePage() {
           <VStack align="start" spacing={2}>
             <Text><b>Device ID:</b> {device.device_id}</Text>
             <Text><b>Location:</b> {device.location || "Unknown"}</Text>
-            <Text><Icon as={FiWifi} mr={2} /><b>IP:</b> {device.ip_addr || "N/A"}</Text>
+            <Text><b>IP:</b> {device.ip_addr || "N/A"}</Text>
+            <Text>
+              <Text as="span" fontWeight="bold" mr={2}>Sensors:</Text>
+              <SensorsIconsList sensors={device.sensors} labels={ false } />
+            </Text>            
             <Text><b>Uptime:</b> {device.uptime ? `${device.uptime}s` : "N/A"}</Text>
             <Text fontSize="sm" color="gray.500">
               Registered: {new Date(device.first_registration_timestamp).toLocaleString()}
@@ -253,8 +258,13 @@ export default function DevicePage() {
 
         {sensors.map((s) => (
           <div key={s.sensor.code} style={{ width: "100%", marginBottom: "2rem" }}>
-            <Flex justify="center" mb={2} mt={2}>
-              <Heading size="md">{s.sensor.name} ({s.sensor.unit})</Heading>
+            <Flex align="center" justify="center" mb={2} mt={2}>
+              <Flex align="center">
+                <SensorIcon code={s.sensor.code} />
+                <Heading size="md" as="span" ml={1}>
+                  {s.sensor.name} ({s.sensor.unit})
+                </Heading>
+              </Flex>
             </Flex>
             <Box
               borderWidth={1}
