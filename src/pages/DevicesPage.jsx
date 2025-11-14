@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Flex, Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text } from "@chakra-ui/react";
+import { Flex, Box, SimpleGrid, Heading, Spinner, HStack, Badge, Icon, Text, Switch } from "@chakra-ui/react";
 import { FiCpu, FiActivity } from "react-icons/fi";
 import DeviceCard from "../components/DeviceCard";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
+import { isDeviceOnline } from "../utils/deviceStatus";
 import { useMonitorStatus } from "../utils/monitorStatus";
 import { useMqtt } from "../context/mqttProvider";
 
@@ -11,6 +12,10 @@ export default function DevicesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sensor_icons, setSensorIcons] = useState([]);
+  const [showOnlyOnline, setShowOnlyOnline] = useState(false);
+  const filteredDevices = showOnlyOnline
+    ? devices.filter((d) => isDeviceOnline(d.lastUpdate))
+    : devices;
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { monitorOnline, setLastHeartbeat } = useMonitorStatus();
@@ -148,9 +153,15 @@ export default function DevicesPage() {
         <HStack spacing={3}>
           <Icon as={FiCpu} boxSize={7} color="blue.500" />
           <Heading size="lg">Devices</Heading>
-          <Badge colorScheme="blue" fontSize="md">
+          <Badge colorScheme="blue" py="1" px="2" borderRadius="md" fontSize="sm">
             {devices.length}
           </Badge>
+          <Switch
+            ml={6}
+            isChecked={showOnlyOnline}
+            onChange={(e) => setShowOnlyOnline(e.target.checked)}
+          />
+          <Text>Show only online devices</Text>
         </HStack>
 
         <Badge colorScheme={badgeColor} fontSize="sm" px={3} py={1} borderRadius="full">
@@ -162,7 +173,7 @@ export default function DevicesPage() {
         <Text color="gray.500">No devices available.</Text>
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-          {devices.map((device) => (
+          {filteredDevices.map((device) => (
             <DeviceCard key={device.device_id || device.id} device={device} sensor_icons={sensor_icons} />
           ))}
         </SimpleGrid>
