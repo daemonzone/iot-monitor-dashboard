@@ -1,34 +1,35 @@
 import { Text, Tooltip, HStack } from "@chakra-ui/react";
-import { FiCpu, FiThermometer, FiDroplet, FiSun } from "react-icons/fi";
+import * as FiIcons from "react-icons/fi";
+import { capitalize } from "./stringUtils.js"
 
-export function SensorIcon({ code }) {
-  switch (code) {
-    case "temperature":
-      return <FiThermometer />;
-    case "humidity":
-      return <FiDroplet />;
-    case "led":
-      return <FiSun />; // or FiZap for lightning
-    case "cpu_temperature":
-      return <FiCpu />;
-    default:
-      return null;
-  }
+export function SensorIcon({ iconName, ...props }) {
+	if (iconName == null) return;
+
+  const IconComponent = FiIcons[iconName];
+  if (!IconComponent) return null;
+
+  return <IconComponent {...props} />;
 }
 
-export function SensorsIconsList({ sensors, labels = true }) {
-  if (!sensors || sensors.length === 0) return null;
+export function SensorsIconsList({ sensor_icons = [], sensors, labels = true }) {
+  if (!sensor_icons || sensor_icons.length === 0) return null;
+
+  const iconsMap = Object.fromEntries(sensor_icons.map((si) => [si.code, si.icon]));
 
   return (
-    <HStack as="span" spacing={2} display="inline-flex">
-      {sensors.map((key) => (
-        <Tooltip key={key} label={key} fontSize="sm" hasArrow>
-          <span style={{ display: "inline-flex", alignItems: "center" }}>
-            <SensorIcon code={key} style={{ marginRight: 2 }} />
-						{labels && key} 
-         	</span>
-        </Tooltip>
-      ))}
+    <HStack as="span" spacing={4} display="inline-flex">
+      {sensors.map((s) => {
+        const iconName = iconsMap[s] || "FiHelpCircle";
+
+        return (
+          <Tooltip key={s} label={capitalize(s)} fontSize="sm" hasArrow>
+            <span style={{ display: "inline-flex", alignItems: "center" }}>
+              <SensorIcon iconName={iconName} style={{ marginRight: labels ? 2 : 0 }} />
+              {labels && capitalize(s)}
+            </span>
+          </Tooltip>
+        );
+      })}
     </HStack>
   );
 }

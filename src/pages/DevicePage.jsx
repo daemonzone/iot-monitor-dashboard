@@ -5,7 +5,7 @@ import {
   Badge, Divider, Icon, Grid, Flex, Button, Input, Stack, FormLabel
 } from "@chakra-ui/react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
-import { FiCpu, FiWifi, FiArrowLeft } from "react-icons/fi";
+import { FiCpu, FiRss, FiArrowLeft } from "react-icons/fi";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import ReadingsChart from "../components/ReadingsChart.jsx";
 import LatestReadingsWidget from "../components/LatestReadingsWidget";
@@ -16,15 +16,25 @@ export default function DevicePage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [device, setDevice] = useState(null);
   const [sensors, setSensors] = useState([]);
   const [lastReading, setLastReading] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  const API_URL = import.meta.env.VITE_API_URL;
+  const [sensor_icons, setSensorIcons] = useState([]);
 
   const { client, connected } = useMqtt(); // shared MQTT client
+
+  useEffect(() => {
+    fetchWithAuth(`${API_URL}/sensors`)
+      .then((data) => {
+        if (data) {      
+          setSensorIcons(data);
+        }
+      })
+  }, []);
 
   // Fetch Device data
   useEffect(() => {
@@ -96,7 +106,7 @@ export default function DevicePage() {
   const [timebucket, setTimebucket] = useState(defaultBucket);
 
   const intervals = [
-    "5 minutes","10 minutes","15 minutes","30 minutes",
+    "1 minute","5 minutes","10 minutes","15 minutes","30 minutes",
     "1 hour","2 hours","4 hours","8 hours",
     "12 hours","1 day","2 days","5 days",
     "1 week","2 weeks","4 weeks","1 month"
@@ -157,7 +167,7 @@ export default function DevicePage() {
         <Icon as={FiCpu} boxSize={8} color="blue.500" />
         <Heading size="lg">{device.model ?? "Unknown Device"}</Heading>
         <Badge colorScheme={online ? "green" : "red"}>
-          <Icon as={FiWifi} verticalAlign="middle" mb={1} mr={1} />{online ? "Online" : "Offline"}
+          <Icon as={FiRss} verticalAlign="middle" mb={1} mr={1} />{online ? "Online" : "Offline"}
         </Badge>
       </HStack>
 
@@ -201,7 +211,7 @@ export default function DevicePage() {
             <Text><b>IP:</b> {device.ip_addr || "N/A"}</Text>
             <Text>
               <Text as="span" fontWeight="bold" mr={2}>Sensors:</Text>
-              <SensorsIconsList sensors={device.sensors} labels={ false } />
+              <SensorsIconsList sensor_icons={sensor_icons} sensors={device.sensors} labels={ false } />
             </Text>            
             <Text><b>Uptime:</b> {device.uptime ? `${device.uptime}s` : "N/A"}</Text>
             <Text fontSize="sm" color="gray.500">
@@ -260,7 +270,6 @@ export default function DevicePage() {
           <div key={s.sensor.code} style={{ width: "100%", marginBottom: "2rem" }}>
             <Flex align="center" justify="center" mb={2} mt={2}>
               <Flex align="center">
-                <SensorIcon code={s.sensor.code} />
                 <Heading size="md" as="span" ml={1}>
                   {s.sensor.name} ({s.sensor.unit})
                 </Heading>

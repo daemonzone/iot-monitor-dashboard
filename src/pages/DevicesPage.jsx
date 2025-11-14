@@ -10,10 +10,20 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sensor_icons, setSensorIcons] = useState([]);
 
   const API_URL = import.meta.env.VITE_API_URL;
   const { monitorOnline, setLastHeartbeat } = useMonitorStatus();
-  const { client, connected } = useMqtt(); // get shared MQTT client
+  const { client, connected } = useMqtt(); // get MQTT client
+
+  useEffect(() => {
+    fetchWithAuth(`${API_URL}/sensors`)
+      .then((data) => {
+        if (data) {    
+          setSensorIcons(data);
+        }
+      })
+  }, []);
 
   // Fetch devices once
   useEffect(() => {
@@ -153,7 +163,7 @@ export default function DevicesPage() {
       ) : (
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
           {devices.map((device) => (
-            <DeviceCard key={device.device_id || device.id} device={device} />
+            <DeviceCard key={device.device_id || device.id} device={device} sensor_icons={sensor_icons} />
           ))}
         </SimpleGrid>
       )}

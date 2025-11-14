@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Box, Image, Text, HStack, VStack, Badge, Icon, Flex, Tooltip } from "@chakra-ui/react";
-import { FiCpu, FiWifi, FiThermometer, FiDroplet, FiSun } from "react-icons/fi";
+import { FiCpu, FiRss, FiThermometer, FiDroplet, FiSun } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { isDeviceOnline } from "../utils/deviceStatus";
 import { SensorsIconsList } from "../utils/sensorsUtils.jsx";
 import DeviceLastReadingsBox from "../components/DeviceLastReadingsBox";
 
-export default function DeviceCard({ device }) {
+export default function DeviceCard({ device, sensor_icons }) {
   const navigate = useNavigate();
   if (!device) return null;
 
@@ -77,7 +77,7 @@ export default function DeviceCard({ device }) {
             <HStack>
               <Text fontWeight="bold" fontSize="2xl">{model || "Unknown Device"}</Text>
               <Badge colorScheme={online ? "green" : "red"}>
-                <Icon as={FiWifi} verticalAlign="middle" mb={1} mr={1} />{online ? "Online" : "Offline"}
+                <Icon as={FiRss} verticalAlign="middle" mb={1} mr={1} />{online ? "Online" : "Offline"}
               </Badge>
             </HStack>
 
@@ -89,7 +89,7 @@ export default function DeviceCard({ device }) {
             </Text>
             <Text fontSize="sm" color="gray.600">
               <Text as="span" fontWeight="bold" mr={2}>Sensors:</Text>
-              <SensorsIconsList sensors={sensors} labels={ false } />
+              <SensorsIconsList sensor_icons={sensor_icons} sensors={sensors} labels={ false } />
             </Text>
             <Text fontSize="sm" color="gray.600">
               <Text as="span" fontWeight="bold">IP:</Text> {ip_addr || "N/A"}
