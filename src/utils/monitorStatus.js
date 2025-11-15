@@ -31,6 +31,7 @@ export function useMonitorStatus() {
       offlineTimeoutRef.current = null;
     }
 
+    console.log(useMonitorStatus, lastHeartbeat)
     if (!lastHeartbeat) {
       offlineTimeoutRef.current = setTimeout(() => { // Start a 60-second timer before marking offline
         setMonitorOnline(false);
