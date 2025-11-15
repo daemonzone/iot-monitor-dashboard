@@ -10,16 +10,19 @@ export function useMonitorStatus() {
   useEffect(() => {
     const savedTs = parseInt(localStorage.getItem("monitor_heartbeat"), 10);
     if (savedTs) {
+      console.log("savedTs", savedTs);
       setLastHeartbeat(savedTs);
       const now = Math.floor(Date.now() / 1000);
       const monitorStatus = (now <= savedTs + HEARTBEAT_TTL);
       if (!monitorStatus)
       	localStorage.removeItem("monitor_heartbeat");
       setMonitorOnline(monitorStatus);
+    } else {
+      console.warn("No previous heartbeat found")
     }
   }, []);
 
-  // Keep monitorOnline updated every second
+  // Keep monitorOnline updated every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       if (!lastHeartbeat) {
@@ -27,6 +30,7 @@ export function useMonitorStatus() {
       	return;
       }
       const now = Math.floor(Date.now() / 1000);
+      console.log("Checking heartbeat validity:", now, lastHeartbeat + HEARTBEAT_TTL, lastHeartbeat + HEARTBEAT_TTL - now, now <= lastHeartbeat + HEARTBEAT_TTL);
       setMonitorOnline(now <= lastHeartbeat + HEARTBEAT_TTL);
     }, 5000);
 
