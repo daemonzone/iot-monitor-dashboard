@@ -38,7 +38,7 @@ export default function DevicesPage() {
     fetchWithAuth(`${API_URL}/devices`)
       .then((data) => {
         if (data) {
-          const enriched = data.map((d) => ({ ...d, lastUpdate: null }));
+          const enriched = data.map((d) => ({ ...d, lastUpdate: d.last_status_update }));
           setDevices(enriched);
         }
       })
