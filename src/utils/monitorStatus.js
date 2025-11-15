@@ -26,12 +26,13 @@ export function useMonitorStatus() {
 
   // Keep monitorOnline updated and handle delayed offline logic
   useEffect(() => {
+    console.log("useMonitorStatus - Hook effect triggered:", lastHeartbeat)
+
     if (offlineTimeoutRef.current) {
       clearTimeout(offlineTimeoutRef.current); // Clear any previous offline timeout
       offlineTimeoutRef.current = null;
     }
 
-    console.log(useMonitorStatus, lastHeartbeat)
     if (!lastHeartbeat) {
       offlineTimeoutRef.current = setTimeout(() => { // Start a 60-second timer before marking offline
         setMonitorOnline(false);
