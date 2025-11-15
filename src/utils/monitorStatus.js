@@ -11,7 +11,6 @@ export function useMonitorStatus() {
   useEffect(() => {
     const savedTs = parseInt(localStorage.getItem("monitor_heartbeat"), 10);
     if (savedTs) {
-      console.log("savedTs", savedTs);
       setLastHeartbeat(savedTs);
 
       const now = Math.floor(Date.now() / 1000);
@@ -19,15 +18,11 @@ export function useMonitorStatus() {
       if (!monitorStatus) localStorage.removeItem("monitor_heartbeat");
 
       setMonitorOnline(monitorStatus);
-    } else {
-      console.warn("No previous heartbeat found");
     }
   }, []);
 
   // Keep monitorOnline updated and handle delayed offline logic
   useEffect(() => {
-    console.log("useMonitorStatus - Hook effect triggered:", lastHeartbeat)
-
     if (offlineTimeoutRef.current) {
       clearTimeout(offlineTimeoutRef.current); // Clear any previous offline timeout
       offlineTimeoutRef.current = null;
