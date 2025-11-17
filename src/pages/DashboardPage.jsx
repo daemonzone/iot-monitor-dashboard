@@ -81,7 +81,7 @@ export default function DashboardPage() {
                 <Box p={4} borderWidth={1} borderRadius="md" bg="white">
                   <Text fontWeight="bold">Temperature</Text>
                   <Text>
-                    Avg: {avgTemp}°C | Min: {minTemp}°C | Max: {maxTemp}°C
+                    Avg: <b>{avgTemp}°C</b> | Min: <b>{minTemp}°C</b>  | Max: <b>{maxTemp}°C</b> 
                   </Text>
                   <Box h="150px" mt={2}>
                     <ResponsiveContainer width="100%" height="100%">
@@ -99,7 +99,7 @@ export default function DashboardPage() {
                 <Box p={4} borderWidth={1} borderRadius="md" bg="white">
                   <Text fontWeight="bold">Humidity</Text>
                   <Text>
-                    Avg: {avgHum}% | Min: {minHum}% | Max: {maxHum}%
+                    Avg: <b>{avgHum}% </b> | Min: <b>{minHum}%</b>  | Max: <b>{maxHum}%</b> 
                   </Text>
                   <Box h="150px" mt={2}>
                     <ResponsiveContainer width="100%" height="100%">
