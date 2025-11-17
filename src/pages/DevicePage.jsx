@@ -151,16 +151,26 @@ export default function DevicePage() {
 
   return (
     <Box p={6}>
-      {/* Back Button */}
-      <Button
-        leftIcon={<FiArrowLeft />}
-        colorScheme="gray"
-        variant="ghost"
-        mb={4}
-        onClick={() => navigate("/devices")}
-      >
-        Back to Devices
-      </Button>
+      {/* Navigation buttons */}
+      <HStack spacing={2} mb={6}>
+        <Button
+          leftIcon={<FiArrowLeft />}
+          colorScheme="gray"
+          variant="ghost"
+          onClick={() => navigate("/dashboard")}
+        >
+          Dashboard
+        </Button>
+
+        <Button
+          leftIcon={<FiArrowLeft />}
+          colorScheme="gray"
+          variant="outline"
+          onClick={() => navigate("/devices")}
+        >
+          Devices
+        </Button>
+      </HStack>
 
       {/* Header */}
       <HStack mb={6} spacing={4} align="center">
