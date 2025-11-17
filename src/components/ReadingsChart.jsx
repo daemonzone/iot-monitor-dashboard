@@ -10,15 +10,12 @@ export default function ReadingsChart({ data }) {
     return <Text color="gray.500">No data available to display.</Text>;
   }
 
-  // Sort readings by time ascending
   const sortedReadings = [...readings].sort((a, b) => new Date(a.time) - new Date(b.time));
 
-  // Check if readings span multiple days
   const firstDay = new Date(sortedReadings[0].time).toDateString();
   const lastDay = new Date(sortedReadings[sortedReadings.length - 1].time).toDateString();
   const showDates = firstDay !== lastDay;
 
-  // Prepare chart data with appropriate x-axis label
   const chartData = sortedReadings.map((r) => {
     const date = new Date(r.time);
     const timeLabel = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -29,7 +26,6 @@ export default function ReadingsChart({ data }) {
     };
   });
 
-  // Compute min/max for temperature
   const values = chartData.map(d => d.value);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -37,35 +33,32 @@ export default function ReadingsChart({ data }) {
   return (
     <Box
       w="100%"
-      h="400px"
-      borderWidth={1}
+      h={{ base: "250px", md: "400px" }}   // smaller height on mobile
       borderRadius="md"
-      p={4}
+      p={{ base: 1, md: 4 }}               // less padding on mobile
+      mb={{ base: 2, md: 4 }}              // less bottom margin between charts
       bg="gray.50"
     >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 50 }}>
+        <LineChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="time" angle={-45} textAnchor="end" interval={0} style={{ fontSize: '10px' }} />
-          
-          {/* LEFT Y-axis */}
+          <XAxis dataKey="time" angle={-45} textAnchor="end" interval={0} style={{ fontSize: '9px' }} />
           <YAxis
             yAxisId="left"
             orientation="left"
             stroke="#F6AD55"
             domain={[min, max]}
             allowDataOverflow={true}
+            style={{ fontSize: '10px' }}
           />
-
           <Tooltip formatter={(value) => (value != null ? value : "N/A")} />
-          <Legend verticalAlign="top" height={36} />
-
+          <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: '10px' }} />
           <Line
             yAxisId="left"
             type="monotone"
             dataKey="value"
             stroke="#F6AD55"
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 4 }}
             name={sensor.name}
             connectNulls
           />

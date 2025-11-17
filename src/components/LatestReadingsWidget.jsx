@@ -1,5 +1,5 @@
 // src/components/LatestReadingsWidget.jsx
-import { Box, Flex, Stat, StatLabel, StatNumber, StatHelpText, Heading, Icon, Text } from "@chakra-ui/react";
+import { Box, Flex, Stat, StatLabel, StatNumber, Heading, Icon, Text } from "@chakra-ui/react";
 import { FiThermometer, FiDroplet } from "react-icons/fi";
 
 export default function LatestReadingsWidget({ temperature, humidity, timestamp }) {
@@ -9,7 +9,7 @@ export default function LatestReadingsWidget({ temperature, humidity, timestamp 
     <Flex
       borderWidth={1}
       borderRadius="md"
-      p={8}
+      p={{ base: 4, md: 8 }}
       bg="gray.800"
       shadow="lg"
       color="white"
@@ -20,31 +20,36 @@ export default function LatestReadingsWidget({ temperature, humidity, timestamp 
       <Heading size="md" mb={6}>
         Latest Readings
       </Heading>
-      <Flex gap={12} align="center" justify="center">
+      <Flex
+        gap={{ base: 8, md: 12 }}
+        align="center"
+        justify="center"
+        direction={{ base: "column", md: "row" }}
+      >
         <Box textAlign="center">
           <Stat>
-            <StatLabel fontSize="lg" color="gray.300">
+            <StatLabel fontSize={{ base: "md", md: "lg" }} color="gray.300">
               <Icon as={FiThermometer} mr={2} />
               Temperature
             </StatLabel>
-            <StatNumber fontSize="5xl" color="orange.300">
+            <StatNumber fontSize={{ base: "3xl", md: "5xl" }} color="orange.300">
               {temperature}
             </StatNumber>
           </Stat>
         </Box>
         <Box textAlign="center">
           <Stat>
-            <StatLabel fontSize="lg" color="gray.300">
+            <StatLabel fontSize={{ base: "md", md: "lg" }} color="gray.300">
               <Icon as={FiDroplet} mr={2} />
               Humidity
             </StatLabel>
-            <StatNumber fontSize="5xl" color="blue.300">
+            <StatNumber fontSize={{ base: "3xl", md: "5xl" }} color="blue.300">
               {humidity}
             </StatNumber>
           </Stat>
         </Box>
       </Flex>
-      <Text mt={4} fontSize="sm" color="gray.400">
+      <Text mt={4} fontSize="sm" color="gray.400" textAlign="center">
         Last reading: {formattedTime}
       </Text>
     </Flex>
