@@ -79,7 +79,7 @@ export default function DashboardPage() {
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
                 {/* Temperature box */}
                 <Box p={4} borderWidth={1} borderRadius="md" bg="white">
-                  <Text fontWeight="bold">Temperature</Text>
+                  <Heading size="md" fontWeight="bold" mb={2}>Temperature</Heading>
                   <Text>
                     Avg: <b>{avgTemp}°C</b> | Min: <b>{minTemp}°C</b>  | Max: <b>{maxTemp}°C</b> 
                   </Text>
@@ -97,7 +97,7 @@ export default function DashboardPage() {
 
                 {/* Humidity box */}
                 <Box p={4} borderWidth={1} borderRadius="md" bg="white">
-                  <Text fontWeight="bold">Humidity</Text>
+                  <Heading size="md" fontWeight="bold" mb={2}>Humidity</Heading>
                   <Text>
                     Avg: <b>{avgHum}% </b> | Min: <b>{minHum}%</b>  | Max: <b>{maxHum}%</b> 
                   </Text>
