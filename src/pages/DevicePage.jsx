@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
-  Box, Heading, Text, Spinner, Image, HStack, VStack,
+  Box, Heading, Text, Spinner, Image, HStack, VStack, Wrap, WrapItem,
   Badge, Divider, Icon, Grid, Flex, Button, Input, Stack, FormLabel
 } from "@chakra-ui/react";
 import { fetchWithAuth } from "../utils/fetchWithAuth";
@@ -245,61 +245,66 @@ export default function DevicePage() {
 
       {/* Chart Section */}
       { sensors.length !== 0 ? (
-      <Stack spacing={4}>
-        <HStack spacing={3} align="center">
-          <FormLabel m={0}>From:</FormLabel>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            maxW="180px"
-          />
-          <FormLabel m={0}>To:</FormLabel>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            maxW="180px"
-          />
-        </HStack>
+        <Stack spacing={4}>
+          {/* Date filters */}
+          <Wrap spacing={3} align="center">
+            <WrapItem>
+              <FormLabel m={0}>From:</FormLabel>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                maxW="180px"
+              />
+            </WrapItem>
+            <WrapItem>
+              <FormLabel m={0}>To:</FormLabel>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                maxW="180px"
+              />
+            </WrapItem>
+          </Wrap>
 
-        <HStack spacing={2}>
-          {intervals.map((intv) => (
-            <Button
-              key={intv}
-              type="button"
-              colorScheme={timebucket === intv ? "blue" : "gray"}
-              onClick={() => setTimebucket(intv)}
-            >
-              {intv}
-            </Button>
-          ))}
-        </HStack>
+          {/* Timebucket buttons */}
+          <Wrap spacing={2}>
+            {intervals.map((intv) => (
+              <WrapItem key={intv}>
+                <Button
+                  type="button"
+                  size="sm"
+                  colorScheme={timebucket === intv ? "blue" : "gray"}
+                  onClick={() => setTimebucket(intv)}
+                >
+                  {intv}
+                </Button>
+              </WrapItem>
+            ))}
+          </Wrap>
 
-        {sensors.map((s) => (
-          <div key={s.sensor.code} style={{ width: "100%", marginBottom: "2rem" }}>
-            <Flex align="center" justify="center" mb={2} mt={2}>
-              <Flex align="center">
-                <Heading size="md" as="span" ml={1}>
-                  {s.sensor.name} ({s.sensor.unit})
-                </Heading>
+          {/* Sensor charts */}
+          {sensors.map((s) => (
+            <Box key={s.sensor.code} w="full" mb={8}>
+              <Flex align="center" mb={2}>
+                <Heading size="md">{s.sensor.name} ({s.sensor.unit})</Heading>
               </Flex>
-            </Flex>
-            <Box
-              borderWidth={1}
-              borderRadius="md"
-              bg="gray.50"
-              minH="300px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-              w="full"
-            >
-              <ReadingsChart data={s} />
+              <Box
+                borderWidth={1}
+                borderRadius="md"
+                bg="gray.50"
+                minH="300px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                w="full"
+              >
+                <ReadingsChart data={s} />
+              </Box>
             </Box>
-          </div>
-        ))}
-      </Stack>
+          ))}
+        </Stack>
       ) : (
         <Stack spacing={4} align="center" justify="center" minH="100px">
           <Text>No sensors data available.</Text>
