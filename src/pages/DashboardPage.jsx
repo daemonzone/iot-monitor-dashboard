@@ -8,7 +8,12 @@ export default function DashboardPage() {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [devices, setDevices] = useState([]);
+  const [sensors, setSensors] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchWithAuth(`${API_URL}/sensors`).then((data) => { if (data) setSensors(data); });
+  }, []);
 
   useEffect(() => {
     fetchWithAuth(`${API_URL}/dashboard`)
@@ -30,93 +35,95 @@ export default function DashboardPage() {
     <Box p={6}>
       <Heading mb={6}>Dashboard</Heading>
 
-      <VStack spacing={8} align="stretch">
-        {devices.map((device) => {
-          const tempBuckets = device.buckets.map((b) => {
-            const temp = b.sensors.find((s) => s.sensor === "temperature");
-            return {
-              time: new Date(b.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              avg: temp?.avg,
-              min: temp?.min,
-              max: temp?.max,
-            };
-          });
+<VStack spacing={8} align="stretch">
+  {devices.map((device) => (
+    <Box
+      key={device.device_id}
+      p={6}
+      borderWidth={1}
+      borderRadius="md"
+      bg="gray.50"
+    >
+      {/* Header */}
+      <ChakraLink
+        as={Link}
+        to={`/devices/${device.device_id}`}
+        _hover={{ textDecoration: "underline", color: "blue.500" }}
+      >
+        <Heading size="lg" mb={2}>{device.location}</Heading>
+      </ChakraLink>
 
-          const humBuckets = device.buckets.map((b) => {
-            const hum = b.sensors.find((s) => s.sensor === "humidity");
-            return {
-              time: new Date(b.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-              avg: hum?.avg,
-              min: hum?.min,
-              max: hum?.max,
-            };
-          });
+      <Text mb={4} fontWeight="bold">
+        {device.model} ({device.device_id})
+      </Text>
 
-          const avgTemp = (tempBuckets.reduce((sum, t) => sum + (t.avg || 0), 0) / tempBuckets.length).toFixed(1);
-          const minTemp = Math.min(...tempBuckets.map((t) => t.min));
-          const maxTemp = Math.max(...tempBuckets.map((t) => t.max));
+      {/* One chart box per sensor */}
+      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+        {device.sensors.map((sensorCode) => {
+          
+          // Extract ONLY the readings for this sensor
+          const chartData = device.buckets
+            .map((b) => {
+              const entry = b.sensors.find((s) => s.sensor === sensorCode);
+              if (!entry) return null;
 
-          const avgHum = (humBuckets.reduce((sum, h) => sum + (h.avg || 0), 0) / humBuckets.length).toFixed(1);
-          const minHum = Math.min(...humBuckets.map((h) => h.min));
-          const maxHum = Math.max(...humBuckets.map((h) => h.max));
+              return {
+                time: new Date(b.time).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+                avg: entry.avg,
+                min: entry.min,
+                max: entry.max,
+              };
+            })
+            .filter(Boolean);
+
+          if (chartData.length === 0) return null; // No data for this sensor
+
+          // Compute stats
+          const avgVal = (
+            chartData.reduce((sum, r) => sum + (r.avg || 0), 0) /
+            chartData.length
+          ).toFixed(1);
+
+          const minVal = Math.min(...chartData.map((r) => r.min));
+          const maxVal = Math.max(...chartData.map((r) => r.max));
+          const unit = sensors.find((i) => i.code === sensorCode).unit;
 
           return (
-            <Box key={device.device_id} p={6} borderWidth={1} borderRadius="md" bg="gray.50">
-              {/* Device header */}
-              <ChakraLink
-                as={Link}
-                to={`/devices/${device.device_id}`}
-                _hover={{ textDecoration: "underline", color: "blue.500" }}
-              >
-                <Heading size="lg" mb={2}>
-                  {device.location}
-                </Heading>
-              </ChakraLink>
-              <Text mb={4} fontWeight="bold">
-                {device.model} ({device.device_id})
+            <Box
+              key={sensorCode}
+              p={4}
+              borderWidth={1}
+              borderRadius="md"
+              bg="white"
+            >
+              <Heading size="md" fontWeight="bold" mb={2}>
+                {sensorCode.charAt(0).toUpperCase() + sensorCode.slice(1)}
+              </Heading>
+
+              <Text mb={2}>
+                Avg: <b>{avgVal} {unit}</b> | Min: <b>{minVal} {unit}</b> | Max: <b>{maxVal} {unit}</b>
               </Text>
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
-                {/* Temperature box */}
-                <Box p={4} borderWidth={1} borderRadius="md" bg="white">
-                  <Heading size="md" fontWeight="bold" mb={2}>Temperature</Heading>
-                  <Text>
-                    Avg: <b>{avgTemp}°C</b> | Min: <b>{minTemp}°C</b>  | Max: <b>{maxTemp}°C</b> 
-                  </Text>
-                  <Box h="150px" mt={2}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={tempBuckets}>
-                        <XAxis dataKey="time" />
-                        <YAxis domain={["auto", "auto"]} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="avg" stroke="#3182CE" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Box>
-
-                {/* Humidity box */}
-                <Box p={4} borderWidth={1} borderRadius="md" bg="white">
-                  <Heading size="md" fontWeight="bold" mb={2}>Humidity</Heading>
-                  <Text>
-                    Avg: <b>{avgHum}% </b> | Min: <b>{minHum}%</b>  | Max: <b>{maxHum}%</b> 
-                  </Text>
-                  <Box h="150px" mt={2}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={humBuckets}>
-                        <XAxis dataKey="time" />
-                        <YAxis domain={["auto", "auto"]} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="avg" stroke="#38A169" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </Box>
-              </SimpleGrid>
+              <Box h="150px">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis dataKey="time" />
+                    <YAxis domain={["auto", "auto"]} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="avg" stroke="#3182CE" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
             </Box>
           );
         })}
-      </VStack>
+      </SimpleGrid>
+    </Box>
+  ))}
+</VStack>
     </Box>
   );
 }

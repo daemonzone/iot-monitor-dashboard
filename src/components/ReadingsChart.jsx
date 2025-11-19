@@ -42,17 +42,17 @@ export default function ReadingsChart({ data }) {
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="time" angle={-45} textAnchor="end" interval={0} style={{ fontSize: '9px' }} />
+          <XAxis dataKey="time" angle={-45} textAnchor="end" interval={0} style={{ fontSize: '10px' }} />
           <YAxis
             yAxisId="left"
             orientation="left"
             stroke="#F6AD55"
             domain={[min, max]}
             allowDataOverflow={true}
-            style={{ fontSize: '10px' }}
+            style={{ fontSize: '14px' }}
           />
           <Tooltip formatter={(value) => (value != null ? value : "N/A")} />
-          <Legend verticalAlign="top" height={24} wrapperStyle={{ fontSize: '10px' }} />
+          <Legend verticalAlign="top" height={50} wrapperStyle={{ fontSize: '20px' }} />
           <Line
             yAxisId="left"
             type="monotone"
